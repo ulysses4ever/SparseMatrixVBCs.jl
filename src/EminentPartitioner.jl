@@ -1,7 +1,7 @@
 struct EminentPartitioner end
 
 function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentPartitioner) where {Tv, Ti}
-    @inbounds begin
+    begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
         m, n = size(A)
@@ -28,20 +28,21 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentPartitioner
             c′ = A_pos[j′ + 1] - A_pos[j′] #The cardinality of the candidate column
             cc′ = 0 #The cardinality of the intersection between column j and j′
             for i in @view A_idx[A_pos[j′]:(A_pos[j′ + 1] - 1)]
-                if abs(hst[i]) == j
+                h = hst[i]
+                if abs(h) == j
                     cc′ += 1
-                    hst[i] = -j
-                elseif j < hst[i]
-                    hst[i] = j
-                elseif hst[i] < -j
+                    hst[i] = -j′
+                elseif j < h
+                    hst[i] = j′
+                elseif h < -j
                     cc′ += 1
-                    hst[i] = -j
+                    hst[i] = -j′
                 else
-                    hst[i] = j
+                    hst[i] = j′
                 end
             end
             w = j′ - j #Current block size
-            if w == w_max || cc′ != c
+            if w == w_max || cc′ != c || c != c′
                 k += 1
                 spl[k + 1] = j′
                 pos[k + 1] = pos[k] + c
@@ -60,6 +61,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentPartitioner
         resize!(spl, k + 1)
         resize!(pos, k + 1)
         resize!(ofs, k + 1)
+
         return Partition{Ti}(spl, pos, ofs)
     end
 end

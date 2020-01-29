@@ -11,7 +11,7 @@ for mtx in [
             "DIMACS10/chesapeake",
             #"Schmid/thermal1",
             #"Boeing/ct20stif",
-            #"Rothberg/3dtube",
+            "Rothberg/3dtube",
            ]
     A = permutedims(1.0 * sparse(mdopen(mtx).A))
 

@@ -34,17 +34,18 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OverlapPartitioner
             d′ = d #Becomes the number of distinct values in the candidate part
             cc′ = 0 #The cardinality of the intersection between column j and j′
             for i in @view A_idx[A_pos[j′]:(A_pos[j′ + 1] - 1)]
-                if abs(hst[i]) == j
+                h = hst[i]
+                if abs(h) == j
                     cc′ += 1
-                    hst[i] = -j
-                elseif j < hst[i]
-                    hst[i] = j
-                elseif hst[i] < -j
+                    hst[i] = -j′
+                elseif j < h
+                    hst[i] = j′
+                elseif h < -j
                     cc′ += 1
-                    hst[i] = -j
+                    hst[i] = -j′
                 else
                     d′ += 1
-                    hst[i] = j
+                    hst[i] = j′
                 end
             end
             w = j′ - j #Current block size
