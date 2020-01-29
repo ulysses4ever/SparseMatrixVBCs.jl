@@ -1,9 +1,7 @@
 module SparseMatrix1DVBCs
 
 using SparseArrays
-using Random
 using SIMD
-using BSON
 using Hwloc
 using BenchmarkTools
 
@@ -36,7 +34,7 @@ end
 
 Base.size(A::SparseMatrix1DVBC) = (A.m, A.n)
 
-const cachefile = joinpath(@__DIR__(), "cache.bson")
+#const cachefile = joinpath(@__DIR__(), "cache.bson")
 
 include("Partitions.jl")
 include("TrSpMV.jl")

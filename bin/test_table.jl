@@ -22,7 +22,7 @@ for mtx in [
     for method in [nothing,
                    SparseMatrix1DVBCs.EminentPartitioner(),
                    SparseMatrix1DVBCs.OverlapPartitioner(0.7),
-                   SparseMatrix1DVBCs.OptimalPartitioner(BlockRowMemoryCost(Float64, Int)),
+                   SparseMatrix1DVBCs.OptimalPartitioner(SparseMatrix1DVBCs.BlockRowMemoryCost(Float64, Int)),
                   ]
         if method == nothing
             x = rand(size(A, 1))

@@ -6,47 +6,60 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentPartitioner
         # i = 1:m rows, j = 1:n columns
         m, n = size(A)
 
-        i = rowvals(A)
+        A_pos = A.colptr
+        A_idx = A.rowval
 
         hst = zeros(Int, m)
 
-        spl = zeros(Int, n + 1)
-        pos = zeros(Int, n + 1)
-        ofs = zeros(Int, n + 1)
+        spl = Vector{Int}(undef, n + 1) # Column split locations
+        pos = Vector{Int}(undef, n + 1) # Number of stored indices so far
+        ofs = Vector{Int}(undef, n + 1) # Number of stored values so far
 
-        d = length(nzrange(A, 1))
+        c = A_pos[2] - A_pos[1] #The cardinality of the first column in the part
         j = 1
         k = 0
+        spl[1] = 1
         pos[1] = 1
         ofs[1] = 1
-        for j′ = 1:n
-            Δ = false
-            d′ = length(nzrange(A, j′))
-            if d′ == d
-                for nz in nzrange(A, j′)
-                    if hst[i[nz]] < j
-                        Δ = true
-                    end
-                    hst[i[nz]] = j′
+        for i in @view A_idx[A_pos[1]:(A_pos[2] - 1)]
+            hst[i] = 1
+        end
+        for j′ = 2:n
+            c′ = A_pos[j′ + 1] - A_pos[j′] #The cardinality of the candidate column
+            cc′ = 0 #The cardinality of the intersection between column j and j′
+            for i in @view A_idx[A_pos[j′]:(A_pos[j′ + 1] - 1)]
+                if abs(hst[i]) == j
+                    cc′ += 1
+                    hst[i] = -j
+                elseif j < hst[i]
+                    hst[i] = j
+                elseif hst[i] < -j
+                    cc′ += 1
+                    hst[i] = -j
+                else
+                    hst[i] = j
                 end
-            else
-                Δ = true
             end
-            w = j′ - j + 1
-            if Δ || w == w_max + 1
+            w = j′ - j #Current block size
+            if w == w_max || cc′ != c
                 k += 1
+                spl[k + 1] = j′
+                pos[k + 1] = pos[k] + c
+                ofs[k + 1] = ofs[k] + w * c
                 j = j′
-                d = d′
-                spl[k] = j
-                pos[k + 1] = pos[k] + d
-                ofs[k + 1] = ofs[k] + w * d
+                c = c′
             end
         end
-        spl[k + 1] = n + 1
+        j′ = n + 1
+        w = j′ - j
+        k += 1
+        spl[k + 1] = j′
+        pos[k + 1] = pos[k] + c
+        ofs[k + 1] = ofs[k] + w * c
 
         resize!(spl, k + 1)
         resize!(pos, k + 1)
         resize!(ofs, k + 1)
-        return (spl, pos, ofs)
+        return Partition{Ti}(spl, pos, ofs)
     end
 end

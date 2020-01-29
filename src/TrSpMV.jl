@@ -106,7 +106,7 @@ end
             A_idx = A.idx
             A_ofs = A.ofs
             A_val = A.val
-            k = length(spl) - 1
+            k = length(A_spl) - 1
             for jj = 1:(k - $(max(Ws...)) - 1)
                 i = A_spl[jj]
                 w = A_spl[jj + 1] - i

@@ -1,4 +1,4 @@
-function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method=OptimalPartitioner(BlockRowMemoryCost{Tv, Ti}())) where {Ws, Tv, Ti}
+function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method=OptimalPartitioner(VBCCSCMemoryCost{Tv, Ti}())) where {Ws, Tv, Ti}
     SparseMatrix1DVBC{Ws}(A, partition(A, max(Ws...), method))
 end
 
@@ -15,7 +15,7 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
         spl = B_prt.spl
         pos = B_prt.pos
         idx = Vector{Ti}(undef, pos[end] - 1)
-        ofs = prt.ofs
+        ofs = B_prt.ofs
         val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
         for qq = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
             val[qq] = zero(Tv)
@@ -23,11 +23,11 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
 
         A_q = ones(Int, max(Ws...))
 
-        k = length(b)
+        k = length(B_prt)
 
         for p = 1:k
-            j = spl′[p]
-            w = spl′[p + 1] - j
+            j = spl[p]
+            w = spl[p + 1] - j
             @assert w <= max(Ws...)
             i = m + 1
             for Δj = 1:w

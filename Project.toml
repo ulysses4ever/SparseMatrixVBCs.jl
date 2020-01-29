@@ -2,3 +2,9 @@ name = "SparseMatrix1DVBCs"
 uuid = "86cc4f4d-8dd3-4f27-8516-1c81281fce43"
 authors = ["Peter Ahrens <ptrahrens@gmail.com>"]
 version = "0.1.0"
+
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+Hwloc = "0e44f5e4-bd66-52a0-8798-143a42290a1d"
+SIMD = "fdea26ae-647d-5447-a871-4b548cad5224"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"

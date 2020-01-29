@@ -2,7 +2,7 @@ struct OverlapPartitioner
     ρ::Float64
 end
 
-function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OSKIPartitioner) where {F, Tv, Ti}
+function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OverlapPartitioner) where {F, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
@@ -10,6 +10,8 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OSKIPartitioner) w
 
         A_pos = A.colptr
         A_idx = A.rowval
+
+        ρ = method.ρ
 
         hst = zeros(Int, m)
 
@@ -24,7 +26,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OSKIPartitioner) w
         spl[1] = 1
         pos[1] = 1
         ofs[1] = 1
-        for i in @view A_idx[A.pos[1]:(A_pos[2] - 1)]
+        for i in @view A_idx[A_pos[1]:(A_pos[2] - 1)]
             hst[i] = 1
         end
         for j′ = 2:n
@@ -46,7 +48,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OSKIPartitioner) w
                 end
             end
             w = j′ - j #Current block size
-            if w == w_max || cc′ < method.ρ * min(c, c′)
+            if w == w_max || cc′ < ρ * min(c, c′)
                 k += 1
                 spl[k + 1] = j′
                 pos[k + 1] = pos[k] + d

@@ -11,6 +11,8 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OptimalPartitioner
         A_pos = A.colptr
         A_idx = A.rowval
 
+        g = method.g
+
         Δ = zeros(Int, n + 1) # Δ is the number of additional distinct entries we see as our part size grows.
         hst = fill(n + 1, m) # hst is the last time we saw some nonzero
         cst = Vector{typeof(zero(g))}(undef, n + 1) # cst[j] is the best cost of a partition from j to n
@@ -34,7 +36,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OptimalPartitioner
             best_d = d
             for j′ = j + 1 : min(j + w_max - 1, n)
                 d += Δ[j′]
-                c = cst[j′ + 1] + f(j′ - j + 1, d) 
+                c = cst[j′ + 1] + g(j′ - j + 1, d) 
                 if c < best_c
                     best_c = c
                     best_d = d
