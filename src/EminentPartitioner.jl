@@ -9,7 +9,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentPartitioner
         A_pos = A.colptr
         A_idx = A.rowval
 
-        hst = zeros(Int, m)
+        #hst = zeros(Int, m)
 
         spl = Vector{Int}(undef, n + 1) # Column split locations
         pos = Vector{Int}(undef, n + 1) # Number of stored indices so far
@@ -21,28 +21,12 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentPartitioner
         spl[1] = 1
         pos[1] = 1
         ofs[1] = 1
-        for i in @view A_idx[A_pos[1]:(A_pos[2] - 1)]
-            hst[i] = 1
-        end
         for j′ = 2:n
             c′ = A_pos[j′ + 1] - A_pos[j′] #The cardinality of the candidate column
-            cc′ = 0 #The cardinality of the intersection between column j and j′
-            for i in @view A_idx[A_pos[j′]:(A_pos[j′ + 1] - 1)]
-                h = hst[i]
-                if abs(h) == j
-                    cc′ += 1
-                    hst[i] = -j′
-                elseif j < h
-                    hst[i] = j′
-                elseif h < -j
-                    cc′ += 1
-                    hst[i] = -j′
-                else
-                    hst[i] = j′
-                end
-            end
             w = j′ - j #Current block size
-            if w == w_max || cc′ != c || c != c′
+            v_j = @view(A_idx[A_pos[j]:(A_pos[j + 1] - 1)])
+            v_j′ = @view(A_idx[A_pos[j′]:(A_pos[j′ + 1] - 1)])
+            if w == w_max || v_j != v_j′
                 k += 1
                 spl[k + 1] = j′
                 pos[k + 1] = pos[k] + c
