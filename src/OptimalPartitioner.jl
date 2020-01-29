@@ -1,8 +1,8 @@
-struct OptimalBlocker{G}
+struct OptimalPartitioner{G}
     g::G
 end
 
-function blocks(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OptimalBlocker{G}) where {G, Tv, Ti}
+function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OptimalPartitioner{G}) where {G, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
@@ -15,7 +15,7 @@ function blocks(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OptimalBlocker{G}) wh
         hst = fill(n + 1, m) # hst is the last time we saw some nonzero
         cst = Vector{typeof(zero(g))}(undef, n + 1) # cst[j] is the best cost of a partition from j to n
         dsc = Vector{Int}(undef, n) # dsc[j] is the corresponding number of distinct nonzero entries in the part
-        B_spl = Vector{Int}(undef, n + 1)
+        spl = Vector{Int}(undef, n + 1)
 
         Δ[n + 1] = 0
         cst[n + 1] = zero(g)
@@ -43,28 +43,28 @@ function blocks(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OptimalBlocker{G}) wh
             end
             cst[j] = best_c
             dsc[j] = best_d
-            B_spl[j] = best_j′
+            spl[j] = best_j′
         end
 
-        B_pos = Vector{Int}(undef, n + 1)
-        B_pos[1] = 1
-        B_ofs = Vector{Int}(undef, n + 1)
-        B_ofs[1] = 1
+        pos = Vector{Int}(undef, n + 1)
+        pos[1] = 1
+        ofs = Vector{Int}(undef, n + 1)
+        ofs[1] = 1
         k = 0
         j = 1
         while j != m + 1
-            j′ = B_spl[j]
+            j′ = spl[j]
             w = j′ - j + 1
             k += 1
-            B_spl[k] = j
-            B_pos[k + 1] = B_pos[k] + B_dsc[j]
-            B_ofs[k + 1] = B_ofs[k] + w * B_dsc[j]
+            spl[k] = j
+            pos[k + 1] = pos[k] + dsc[j]
+            ofs[k + 1] = ofs[k] + w * dsc[j]
             j += w
         end
-        B_spl[k + 1] = j
-        resize!(B_spl, k + 1)
-        resize!(B_pos, k + 1)
-        resize!(B_ofs, k + 1)
-        return Blocks{Ti}(B_spl, B_pos, B_ofs)
+        spl[k + 1] = j
+        resize!(spl, k + 1)
+        resize!(pos, k + 1)
+        resize!(ofs, k + 1)
+        return Partition{Ti}(spl, pos, ofs)
     end
 end

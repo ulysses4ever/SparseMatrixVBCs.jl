@@ -1,9 +1,8 @@
-struct OverlapBlocker
+struct OverlapPartitioner
     ρ::Float64
 end
 
-
-function blocks(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OSKIBlocker) where {F, Tv, Ti}
+function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OSKIPartitioner) where {F, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
@@ -14,17 +13,17 @@ function blocks(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OSKIBlocker) where {F
 
         hst = zeros(Int, m)
 
-        B_spl = Vector{Int}(undef, n + 1) # Column split locations
-        B_pos = Vector{Int}(undef, n + 1) # Number of stored indices so far
-        B_ofs = Vector{Int}(undef, n + 1) # Number of stored values so far
+        spl = Vector{Int}(undef, n + 1) # Column split locations
+        pos = Vector{Int}(undef, n + 1) # Number of stored indices so far
+        ofs = Vector{Int}(undef, n + 1) # Number of stored values so far
 
         d = A_pos[2] - A_pos[1] #The number of distinct values in the part
         c = A_pos[2] - A_pos[1] #The cardinality of the first column in the part
         j = 1
         k = 0
-        B_spl[1] = 1
-        B_pos[1] = 1
-        B_ofs[1] = 1
+        spl[1] = 1
+        pos[1] = 1
+        ofs[1] = 1
         for i in @view A_idx[A.pos[1]:(A_pos[2] - 1)]
             hst[i] = 1
         end
@@ -49,9 +48,9 @@ function blocks(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OSKIBlocker) where {F
             w = j′ - j #Current block size
             if w == w_max || cc′ < method.ρ * min(c, c′)
                 k += 1
-                B_spl[k + 1] = j′
-                B_pos[k + 1] = B_pos[k] + d
-                B_ofs[k + 1] = B_ofs[k] + w * d
+                spl[k + 1] = j′
+                pos[k + 1] = pos[k] + d
+                ofs[k + 1] = ofs[k] + w * d
                 j = j′
                 d = c′
             else
@@ -61,13 +60,13 @@ function blocks(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OSKIBlocker) where {F
         j′ = n + 1
         w = j′ - j
         k += 1
-        B_spl[k + 1] = j′
-        B_pos[k + 1] = B_pos[k] + d
-        B_ofs[k + 1] = B_ofs[k] + w * d
+        spl[k + 1] = j′
+        pos[k + 1] = pos[k] + d
+        ofs[k + 1] = ofs[k] + w * d
 
         resize!(spl, k + 1)
         resize!(pos, k + 1)
         resize!(ofs, k + 1)
-        return Blocks{Ti}(spl, pos, ofs)
+        return Partition{Ti}(spl, pos, ofs)
     end
 end

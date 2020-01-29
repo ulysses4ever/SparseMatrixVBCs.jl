@@ -34,14 +34,16 @@ struct SparseMatrix1DVBC{Ws, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
     end
 end
 
+Base.size(A::SparseMatrix1DVBC) = (A.m, A.n)
+
 const cachefile = joinpath(@__DIR__(), "cache.bson")
 
-include("Blocks.jl")
+include("Partitions.jl")
 include("TrSpMV.jl")
 include("costs.jl")
-include("EmminentBlocker.jl")
-include("OverlapBlocker.jl")
-include("OptimalBlocker.jl")
+include("EminentPartitioner.jl")
+include("OverlapPartitioner.jl")
+include("OptimalPartitioner.jl")
 include("constructors.jl")
 
 end # module

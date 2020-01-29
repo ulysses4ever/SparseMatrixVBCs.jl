@@ -1,10 +1,12 @@
-function blockcost(g::G, b::Blocks) where {G}
+function partitioncost(g::G, A_prt::Partition) where {G}
     @inbounds begin
+        A_spl = A_prt.spl
+        A_pos = A_prt.pos
         k = length(s)
 
-        c = zero(f)
+        c = zero(g)
         for jj = 1:k
-            c += g(b.spl[jj + 1] - b.spl[jj], b.pos[jj + 1] - b.pos[jj])
+            c += g(A_spl[jj + 1] - A_spl[jj], A_pos[jj + 1] - A_pos[jj])
         end
         return c
     end
@@ -16,20 +18,20 @@ struct FixedBlockCost end
 
 Base.zero(::FixedBlockCost) = 0
 
-@inline (::FixedBlockCost)(w) = 1
+@inline (::FixedBlockCost)(w, d) = d
 
 
 
-struct VBCCSCMemoryCost{Tv, Ti} end
+struct BlockRowMemoryCost{Tv, Ti} end
 
-VBCCSCMemoryCost(Tv, Ti) = VBCCSCMemoryCost{Tv, Ti}()
+BlockRowMemoryCost(Tv, Ti) = BlockRowMemoryCost{Tv, Ti}()
 
-@inline (::VBCCSCMemoryCost{Tv, Ti})(w, d) where {Tv, Ti} = 3 * sizeof(Ti) + d * (sizeof(Ti) + w * sizeof(Tv))
+@inline (::BlockRowMemoryCost{Tv, Ti})(w, d) where {Tv, Ti} = 3 * sizeof(Ti) + d * (sizeof(Ti) + w * sizeof(Tv))
 
-Base.zero(g::VBCCSCMemoryCost) = g(false, false)
+Base.zero(g::BlockRowMemoryCost) = g(false, false)
 
-function Base.show(io::IO, g::VBCCSCMemoryCost{Tv, Ti}) where {Tv, Ti}
-    print(io, "VBCCSCMemoryCost")
+function Base.show(io::IO, g::BlockRowMemoryCost{Tv, Ti}) where {Tv, Ti}
+    print(io, "BlockRowMemoryCost")
     print(io, (Tv, Ti))
 end
 

@@ -1,12 +1,12 @@
-struct EminentBlocker end
+struct EminentPartitioner end
 
-function blocks(B::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentBlocker) where {Tv, Ti}
+function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentPartitioner) where {Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
-        m, n = size(B)
+        m, n = size(A)
 
-        i = rowvals(B)
+        i = rowvals(A)
 
         hst = zeros(Int, m)
 
@@ -14,16 +14,16 @@ function blocks(B::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentBlocker) where
         pos = zeros(Int, n + 1)
         ofs = zeros(Int, n + 1)
 
-        d = length(nzrange(B, 1))
+        d = length(nzrange(A, 1))
         j = 1
         k = 0
         pos[1] = 1
         ofs[1] = 1
         for j′ = 1:n
             Δ = false
-            d′ = length(nzrange(B, j′))
+            d′ = length(nzrange(A, j′))
             if d′ == d
-                for nz in nzrange(B, j′)
+                for nz in nzrange(A, j′)
                     if hst[i[nz]] < j
                         Δ = true
                     end

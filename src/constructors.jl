@@ -1,49 +1,54 @@
-Base.size(mat::SparseMatrix1DVBC) = (mat.m, mat.n)
-
-function SparseMatrix1DVBC{Ws}(arg::SparseMatrixCSC{Tv, Ti}, method=OptimalBlocker(VBCCSCMemoryCost{Tv, Ti}())) where {Ws, Tv, Ti}
-    SparseMatrix1DVBC{Ws}(arg, blocks(arg, max(Ws...), method))
+function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method=OptimalPartitioner(BlockRowMemoryCost{Tv, Ti}())) where {Ws, Tv, Ti}
+    SparseMatrix1DVBC{Ws}(A, partition(A, max(Ws...), method))
 end
 
-function SparseMatrix1DVBC{Ws}(arg::SparseMatrixCSC{Tv, Ti}, b::Blocks{Ti}) where {Ws, Tv, Ti}
+function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti}) where {Ws, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
-        m, n = size(arg)
+        m, n = size(A)
 
-        idx = Vector{Ti}(undef, b.pos[end] - 1)
-        val = Vector{Tv}(undef, b.ofs[end] - 1 + max(Ws...))
-        for qq = b.ofs[end] : b.ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
+        A_pos = A.colptr
+        A_idx = A.rowval
+        A_val = A.nzval
+
+        spl = B_prt.spl
+        pos = B_prt.pos
+        idx = Vector{Ti}(undef, pos[end] - 1)
+        ofs = prt.ofs
+        val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
+        for qq = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
             val[qq] = zero(Tv)
         end
 
-        arg_q = ones(Int, max(Ws...))
+        A_q = ones(Int, max(Ws...))
 
         k = length(b)
 
         for p = 1:k
-            j = b.spl[p]
-            w = b.spl[p + 1] - j
+            j = spl′[p]
+            w = spl′[p + 1] - j
             @assert w <= max(Ws...)
             i = m + 1
             for Δj = 1:w
-                arg_q[Δj] = arg.colptr[j + Δj - 1]
-                if arg_q[Δj] < arg.colptr[j + Δj]
-                    i = min(i, arg.rowval[arg_q[Δj]])
+                A_q[Δj] = A_pos[j + Δj - 1]
+                if A_q[Δj] < A_pos[j + Δj]
+                    i = min(i, A_idx[A_q[Δj]])
                 end
             end
-            qq = b.pos[p]
-            q = b.ofs[p]
+            qq = pos[p]
+            q = ofs[p]
             while i != m + 1
                 i′ = m + 1
                 for Δj = 1:w
                     tmp = zero(Tv)
-                    if arg_q[Δj] < arg.colptr[j + Δj]
-                        if arg.rowval[arg_q[Δj]] == i
-                            tmp = arg.nzval[arg_q[Δj]] 
-                            arg_q[Δj] += 1
+                    if A_q[Δj] < A_pos[j + Δj]
+                        if A_idx[A_q[Δj]] == i
+                            tmp = A_val[A_q[Δj]] 
+                            A_q[Δj] += 1
                         end
-                        if arg_q[Δj] < arg.colptr[j + Δj]
-                            i′ = min(i′, arg.rowval[arg_q[Δj]])
+                        if A_q[Δj] < A_pos[j + Δj]
+                            i′ = min(i′, A_idx[A_q[Δj]])
                         end
                     end
                     val[q] = tmp
@@ -54,6 +59,6 @@ function SparseMatrix1DVBC{Ws}(arg::SparseMatrixCSC{Tv, Ti}, b::Blocks{Ti}) wher
                 i = i′
             end
         end
-        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, b.spl, b.pos, idx, b.ofs, val)
+        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, spl, pos, idx, ofs, val)
     end
 end

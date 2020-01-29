@@ -5,13 +5,13 @@ function TrSpMV!(y::Vector, A::SparseMatrixCSC, x::Vector)
         m = length(y)
         n = length(x)
         
-        pos = A.colptr
-        idx = A.rowval
-        val = A.nzval
+        A_pos = A.colptr
+        A_idx = A.rowval
+        A_val = A.nzval
         for i = 1:length(y)
             tmp = zero(eltype(y))
-            for j = pos[i]:(pos[i + 1] - 1)
-                tmp += val[j] * x[idx[j]]
+            for j = A_pos[i]:(A_pos[i + 1] - 1)
+                tmp += A_val[j] * x[A_idx[j]]
             end
             y[i] = tmp
         end
@@ -34,9 +34,9 @@ end
         if W == 1
             return quote
                 tmp = zero(eltype(y))
-                qq = ofs[jj]
-                for q = pos[jj]:(pos[jj + 1] - 1)
-                    tmp += val[qq] * x[idx[q]]
+                qq = A_ofs[jj]
+                for q = A_pos[jj]:(A_pos[jj + 1] - 1)
+                    tmp += A_val[qq] * x[A_idx[q]]
                     qq += 1
                 end
                 y[i] = tmp
@@ -45,9 +45,9 @@ end
         else
             return quote
                 tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
-                qq = ofs[jj]
-                for q = pos[jj]:(pos[jj + 1] - 1)
-                    tmp += vload(Vec{$W, eltype(y)}, val, qq) * x[idx[q]]
+                qq = A_ofs[jj]
+                for q = A_pos[jj]:(A_pos[jj + 1] - 1)
+                    tmp += vload(Vec{$W, eltype(y)}, A_val, qq) * x[A_idx[q]]
                     qq += w
                 end
                 vstore(tmp, y, i)
@@ -70,9 +70,9 @@ end
         if W == 1
             return quote
                 tmp = zero(eltype(y))
-                qq = ofs[jj]
-                for q = pos[jj]:(pos[jj + 1] - 1)
-                    tmp += val[qq] * x[idx[q]]
+                qq = A_ofs[jj]
+                for q = A_pos[jj]:(A_pos[jj + 1] - 1)
+                    tmp += A_val[qq] * x[A_idx[q]]
                     qq += 1
                 end
                 y[i] = tmp
@@ -81,9 +81,9 @@ end
         else
             return quote
                 tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
-                qq = ofs[jj]
-                for q = pos[jj]:(pos[jj + 1] - 1)
-                    tmp += vload(Vec{$W, eltype(y)}, val, qq) * x[idx[q]]
+                qq = A_ofs[jj]
+                for q = A_pos[jj]:(A_pos[jj + 1] - 1)
+                    tmp += vload(Vec{$W, eltype(y)}, A_val, qq) * x[A_idx[q]]
                     qq += w
                 end
                 for Δi = 1:w
@@ -101,20 +101,20 @@ end
             m = length(y)
             n = length(x)
             
-            spl = A.spl
-            pos = A.pos
-            idx = A.idx
-            ofs = A.ofs
-            val = A.val
+            A_spl = A.spl
+            A_pos = A.pos
+            A_idx = A.idx
+            A_ofs = A.ofs
+            A_val = A.val
             k = length(spl) - 1
             for jj = 1:(k - $(max(Ws...)) - 1)
-                i = spl[jj]
-                w = spl[jj + 1] - i
+                i = A_spl[jj]
+                w = A_spl[jj + 1] - i
                 $(unsafe_thunk(Ws...))
             end
             for jj = max(1, (k - $(max(Ws...)))):k
-                i = spl[jj]
-                w = spl[jj + 1] - i
+                i = A_spl[jj]
+                w = A_spl[jj + 1] - i
                 $(safe_thunk(Ws...))
             end
             return y

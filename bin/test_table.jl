@@ -1,21 +1,17 @@
 using SparseArrays
-using SIMD
-using BSON
-using VBCCSCSparseMatrices
+using SparseMatrix1DVBCs
 using LinearAlgebra
-using Interpolations
 using MatrixDepot
 using BenchmarkTools
-using LinearAlgebra: mul!
 using Cthulhu
 using UnicodePlots
 using PrettyTables
 
 for mtx in [
             "DIMACS10/chesapeake",
-            "Schmid/thermal1",
-            "Boeing/ct20stif",
-            "Rothberg/3dtube",
+            #"Schmid/thermal1",
+            #"Boeing/ct20stif",
+            #"Rothberg/3dtube",
            ]
     A = permutedims(1.0 * sparse(mdopen(mtx).A))
 
@@ -24,9 +20,9 @@ for mtx in [
     println(spy(A, maxwidth=50, maxheight=50, title="$mtx"))
     rows = []
     for method in [nothing,
-                   SPARSKITBlocker(),
-                   OverlapBlocker(0.7),
-                   OptimalBlocker(VBCCSCMemoryCost(Float64, Int)),
+                   SparseMatrix1DVBCs.EminentPartitioner(),
+                   SparseMatrix1DVBCs.OverlapPartitioner(0.7),
+                   SparseMatrix1DVBCs.OptimalPartitioner(BlockRowMemoryCost(Float64, Int)),
                   ]
         if method == nothing
             x = rand(size(A, 1))
@@ -39,16 +35,16 @@ for mtx in [
             @assert y == z
             push!(rows, [method setup_time mem run_time])
         else
-            A_block = SparseMatrix1DVBC{(1,4,8)}(A, method)
+            B = SparseMatrix1DVBC{(1,4,8)}(A, method)
             setup_time = time(@benchmark SparseMatrix1DVBC{(1,4,8)}($A, $method))
 
             x = rand(size(A, 1))
             y = rand(size(A, 2))
             z = A' * x
 
-            mem = sizeof(A_block.spl) + sizeof(A_block.pos) + sizeof(A_block.idx) + sizeof(A_block.ofs) + sizeof(A_block.val)
+            mem = sizeof(B.spl) + sizeof(B.pos) + sizeof(B.idx) + sizeof(B.ofs) + sizeof(B.val)
 
-            run_time = time(@benchmark TrSpMV!($y, $A_block, $x))
+            run_time = time(@benchmark TrSpMV!($y, $B, $x))
 
             @assert y == z
             push!(rows, [method setup_time mem run_time])
