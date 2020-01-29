@@ -1,0 +1,4 @@
+name = "SparseMatrix1DVBCs"
+uuid = "86cc4f4d-8dd3-4f27-8516-1c81281fce43"
+authors = ["Peter Ahrens <ptrahrens@gmail.com>"]
+version = "0.1.0"
