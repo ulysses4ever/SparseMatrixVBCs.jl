@@ -1,7 +1,7 @@
 struct EminentPartitioner end
 
 function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentPartitioner) where {Tv, Ti}
-    begin
+    @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
         m, n = size(A)
@@ -47,5 +47,47 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentPartitioner
         resize!(ofs, k + 1)
 
         return Partition{Ti}(spl, pos, ofs)
+    end
+end
+
+function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method::EminentPartitioner) where {Ws, Tv, Ti}
+    @inbounds begin
+        # matrix notation...
+        # i = 1:m rows, j = 1:n columns
+        m, n = size(A)
+
+        B_prt = partition(A, max(Ws...), EminentPartitioner())
+
+        A_pos = A.colptr
+        A_idx = A.rowval
+        A_val = A.nzval
+
+        k = length(B_prt)
+
+        spl = B_prt.spl
+        pos = B_prt.pos
+        idx = Vector{Ti}(undef, pos[end] - 1)
+        ofs = B_prt.ofs
+        val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
+        for qq = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
+            val[qq] = zero(Tv)
+        end
+
+        A_q = ones(Int, max(Ws...))
+
+        for p = 1:k
+            j = spl[p]
+            w = spl[p + 1] - j
+            @assert w <= max(Ws...)
+            for q = 0 : A_pos[j + 1] - A_pos[j] - 1
+                idx[pos[p] + q] = A_idx[A_pos[j] + q]
+            end
+            for j′ = spl[p] : (spl[p + 1] - 1)
+                for q = 0 : A_pos[j + 1] - A_pos[j] - 1
+                    val[ofs[p] + q * w + j′ - j] = A_val[A_pos[j′] + q]
+                end
+            end
+        end
+        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, spl, pos, idx, ofs, val)
     end
 end

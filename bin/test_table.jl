@@ -11,7 +11,7 @@ for mtx in [
             "DIMACS10/chesapeake",
             #"Schmid/thermal1",
             "Boeing/ct20stif",
-            #"Rothberg/3dtube",
+            "Rothberg/3dtube",
            ]
     A = permutedims(1.0 * sparse(mdopen(mtx).A))
 
@@ -21,7 +21,7 @@ for mtx in [
     rows = []
     for method in [nothing,
                    SparseMatrix1DVBCs.EminentPartitioner(),
-                   SparseMatrix1DVBCs.OverlapPartitioner(0.7),
+                   SparseMatrix1DVBCs.OverlapPartitioner(0.9),
                    SparseMatrix1DVBCs.OptimalPartitioner(SparseMatrix1DVBCs.BlockRowMemoryCost(Float64, Int)),
                   ]
         if method == nothing

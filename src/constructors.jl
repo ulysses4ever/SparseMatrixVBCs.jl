@@ -8,9 +8,12 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
         # i = 1:m rows, j = 1:n columns
         m, n = size(A)
 
+
         A_pos = A.colptr
         A_idx = A.rowval
         A_val = A.nzval
+
+        k = length(B_prt)
 
         spl = B_prt.spl
         pos = B_prt.pos
@@ -22,8 +25,6 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
         end
 
         A_q = ones(Int, max(Ws...))
-
-        k = length(B_prt)
 
         for p = 1:k
             j = spl[p]
