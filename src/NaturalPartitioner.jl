@@ -1,6 +1,6 @@
-struct EminentPartitioner end
+struct NaturalPartitioner end
 
-function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentPartitioner) where {Tv, Ti}
+function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::NaturalPartitioner) where {Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
@@ -50,13 +50,13 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::EminentPartitioner
     end
 end
 
-function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method::EminentPartitioner) where {Ws, Tv, Ti}
+function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method::NaturalPartitioner) where {Ws, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
         m, n = size(A)
 
-        B_prt = partition(A, max(Ws...), EminentPartitioner())
+        B_prt = partition(A, max(Ws...), NaturalPartitioner())
 
         A_pos = A.colptr
         A_idx = A.rowval

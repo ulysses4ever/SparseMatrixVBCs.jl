@@ -8,9 +8,9 @@ using UnicodePlots
 using PrettyTables
 
 for mtx in [
+            "Boeing/ct20stif",
             "DIMACS10/chesapeake",
             #"Schmid/thermal1",
-            "Boeing/ct20stif",
             "Rothberg/3dtube",
            ]
     A = permutedims(1.0 * sparse(mdopen(mtx).A))
@@ -20,7 +20,7 @@ for mtx in [
     println(spy(A, maxwidth=50, maxheight=50, title="$mtx"))
     rows = []
     for method in [nothing,
-                   SparseMatrix1DVBCs.EminentPartitioner(),
+                   SparseMatrix1DVBCs.NaturalPartitioner(),
                    SparseMatrix1DVBCs.OverlapPartitioner(0.9),
                    SparseMatrix1DVBCs.OptimalPartitioner(SparseMatrix1DVBCs.BlockRowMemoryCost(Float64, Int)),
                   ]
