@@ -33,7 +33,7 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
             if w == 1
                 qq = pos[p]
                 q = ofs[p]
-                for A_q_1 = A_pos[j]:A_pos[j + w]
+                for A_q_1 = A_pos[j]:(A_pos[j + w] - 1)
                     idx[qq] = A_idx[A_q_1]
                     val[q] = A_val[A_q_1]
                     qq += 1
