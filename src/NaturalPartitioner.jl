@@ -24,9 +24,20 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::NaturalPartitioner
         for j′ = 2:n
             c′ = A_pos[j′ + 1] - A_pos[j′] #The cardinality of the candidate column
             w = j′ - j #Current block size
-            v_j = @view(A_idx[A_pos[j]:(A_pos[j + 1] - 1)])
-            v_j′ = @view(A_idx[A_pos[j′]:(A_pos[j′ + 1] - 1)])
-            if w == w_max || v_j != v_j′
+            d = true
+            if c == c′ && w != w_max
+                q′ = A_pos[j′]
+                for q = A_pos[j]:(A_pos[j + 1] - 1)
+                    if A_idx[q] != A_idx[q′]
+                        d = false
+                        break
+                    end
+                    q′ += 1
+                end
+            else
+                d = false
+            end
+            if !d
                 k += 1
                 spl[k + 1] = j′
                 pos[k + 1] = pos[k] + c
