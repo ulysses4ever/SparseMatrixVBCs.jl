@@ -3,7 +3,7 @@ struct OptimalPartitioner{G}
 end
 
 function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OptimalPartitioner{G}) where {G, Tv, Ti}
-    begin
+    @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
         m, n = size(A)
