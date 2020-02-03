@@ -30,34 +30,45 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
             j = spl[p]
             w = spl[p + 1] - j
             @assert w <= max(Ws...)
-            i = m + 1
-            for Δj = 1:w
-                A_q[Δj] = A_pos[j + Δj - 1]
-                if A_q[Δj] < A_pos[j + Δj]
-                    i = min(i, A_idx[A_q[Δj]])
-                end
-            end
-            qq = pos[p]
-            q = ofs[p]
-            while i != m + 1
-                i′ = m + 1
-                for Δj = 1:w
-                    tmp = zero(Tv)
-                    if A_q[Δj] < A_pos[j + Δj]
-                        if A_idx[A_q[Δj]] == i
-                            tmp = A_val[A_q[Δj]] 
-                            A_q[Δj] += 1
-                        end
-                        if A_q[Δj] < A_pos[j + Δj]
-                            i′ = min(i′, A_idx[A_q[Δj]])
-                        end
-                    end
-                    val[q] = tmp
+            if w == 1
+                qq = pos[p]
+                q = ofs[p]
+                for A_q_1 = A_pos[j]:A_pos[j + w]
+                    idx[qq] = A_idx[A_q_1]
+                    val[q] = A_val[A_q_1]
+                    qq += 1
                     q += 1
                 end
-                idx[qq] = i
-                qq += 1
-                i = i′
+            else
+                i = m + 1
+                for Δj = 1:w
+                    A_q[Δj] = A_pos[j + Δj - 1]
+                    if A_q[Δj] < A_pos[j + Δj]
+                        i = min(i, A_idx[A_q[Δj]])
+                    end
+                end
+                qq = pos[p]
+                q = ofs[p]
+                while i != m + 1
+                    i′ = m + 1
+                    for Δj = 1:w
+                        tmp = zero(Tv)
+                        if A_q[Δj] < A_pos[j + Δj]
+                            if A_idx[A_q[Δj]] == i
+                                tmp = A_val[A_q[Δj]] 
+                                A_q[Δj] += 1
+                            end
+                            if A_q[Δj] < A_pos[j + Δj]
+                                i′ = min(i′, A_idx[A_q[Δj]])
+                            end
+                        end
+                        val[q] = tmp
+                        q += 1
+                    end
+                    idx[qq] = i
+                    qq += 1
+                    i = i′
+                end
             end
         end
         return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, spl, pos, idx, ofs, val)
