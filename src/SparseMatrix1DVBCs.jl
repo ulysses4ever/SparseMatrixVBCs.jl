@@ -4,6 +4,8 @@ using SparseArrays
 using SIMD
 using Hwloc
 using BenchmarkTools
+using BSON
+using Statistics
 
 export SparseMatrix1DVBC
 export TrSpMV!
@@ -34,7 +36,7 @@ end
 
 Base.size(A::SparseMatrix1DVBC) = (A.m, A.n)
 
-#const cachefile = joinpath(@__DIR__(), "cache.bson")
+const cachefile = joinpath(@__DIR__(), "cache.bson")
 
 include("Partitions.jl")
 include("TrSpMV.jl")

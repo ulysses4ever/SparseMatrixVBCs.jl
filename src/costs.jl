@@ -37,52 +37,60 @@ end
 
 
 
-#=
-struct VBCCSCTimeCost{Ws, Tv, Ti}
-    gs::Vector{Interpolations.Extrapolation{Float64,1,Interpolations.GriddedInterpolation{Float64,1,Float64,Gridded{Linear},Tuple{Array{Int64,1}}},Gridded{Linear},Line{Nothing}}}
-    function VBCCSCTimeCost{Ws, Tv, Ti}() where {Ws, Tv, Ti}
+struct BlockRowTimeCost{Ws, Tv, Ti}
+    αs::Vector{Float64}
+    βs::Vector{Float64}
+    function BlockRowTimeCost{Ws, Tv, Ti}() where {Ws, Tv, Ti}
         cache = Dict()
         if isfile(cachefile)
             cache = BSON.load(cachefile)
         end
-        if !(VBCCSCTimeCost{Ws, Tv, Ti} in keys(cache))
-            @info "calculating $(SparseMatrix1DVBC{Ws, Tv, Ti}) runtime cost model..."
-            fs = Interpolations.Extrapolation{Float64,1,Interpolations.GriddedInterpolation{Float64,1,Float64,Gridded{Linear},Tuple{Array{Int64,1}}},Gridded{Linear},Line{Nothing}}[]
-            ms = [0, 1, 2, 4, 8, 32, 128]
-            q = cld(first(filter(t->t.type_==:L3Cache, collect(Hwloc.topology_load()))).attr.size, sizeof(Tv)) #Attempt to fill the L3 cache. Could be improved.
+        if !(BlockRowTimeCost{Ws, Tv, Ti} in keys(cache))
+            @info "calculating $(BlockRowTimeCost{Ws, Tv, Ti}) model..."
+
+            αs = Float64[]
+            βs = Float64[]
+            ms = [1, 2, 3, 4, 5, 6, 7, 8]
+            mem_max = fld(first(filter(t->t.type_==:L1Cache, collect(Hwloc.topology_load()))).attr.size, 2) #Half the L1 cache size. Could be improved.
+            mem = BlockRowMemoryCost{Tv, Ti}()
             for w in 1:max(Ws...)
                 ts = Float64[]
                 for m in ms
-                    k = cld(q, w * max(m, 1)) #Gotta hit that l3 cache yo!
+                    k = fld(mem_max, mem(w, max(m, 1)))
                     n = w * k
                     spl = collect(Ti(1):Ti(w):Ti(n + 1))
                     ofs = 1 .+ ((spl .- 1) .* m)
                     pos = 1 .+ (fld.((ofs .- 1), w))
-                    A = SparseMatrix1DVBC{Ws}(sparse(ones(Tv, m, n)), Blocks{Ti}(spl, pos, ofs))
+                    A = SparseMatrix1DVBC{Ws}(sparse(ones(Tv, m, n)), Partition{Ti}(spl, pos, ofs))
                     x = ones(Tv, m)
                     y = ones(Tv, n)
-                    t = time(@benchmark TrSpMV!($y, $A, $x) seconds=10) / k
+                    t = time(@benchmark TrSpMV!($y, $A, $x) seconds=10 samples=100_000) / k
                     push!(ts, t)
-                    @info "w: $w m: $m t: $t"
+                    @info "w: $w m: $m k: $k t: $t"
                 end
-                push!(fs, LinearInterpolation(ms, ts, extrapolation_bc = Natural()))
+                m̅ = mean(ms)
+                t̅ = mean(ts)
+                β = sum((ts .- t̅).*(ms .- m̅)) / sum((ms .- m̅).*(ms .- m̅))
+                α = t̅ - β*m̅
+                push!(αs, α)
+                push!(βs, β)
+                @info "w: $w α: $α β: $β"
             end
             @info "done!"
-            cache[VBCCSCTimeCost{Ws, Tv, Ti}] = new{Ws, Tv, Ti}(fs)
+            cache[BlockRowTimeCost{Ws, Tv, Ti}] = new{Ws, Tv, Ti}(αs, βs)
         end
         BSON.bson(cachefile, cache)
-        return cache[VBCCSCTimeCost{Ws, Tv, Ti}]
+        return cache[BlockRowTimeCost{Ws, Tv, Ti}]
     end
 end
 
-VBCCSCTimeCost(Ws, Tv, Ti) = VBCCSCTimeCost{Ws, Tv, Ti}()
+BlockRowTimeCost(Ws, Tv, Ti) = BlockRowTimeCost{Ws, Tv, Ti}()
 
-@inline (f::VBCCSCTimeCost)(w, d)::Float64 = f.fs[w](d)
+@inline (g::BlockRowTimeCost)(w, d)::Float64 = g.αs[w] + g.βs[w]*d
 
-Base.zero(f::VBCCSCTimeCost) = zero(Float64)
+Base.zero(g::BlockRowTimeCost) = zero(Float64)
 
-function Base.show(io::IO, f::VBCCSCTimeCost{Ws, Tv, Ti}) where {Ws, Tv, Ti}
-    print(io, "VBCCSCTimeCost")
+function Base.show(io::IO, ::BlockRowTimeCost{Ws, Tv, Ti}) where {Ws, Tv, Ti}
+    print(io, "BlockRowTimeCost")
     print(io, (Ws, Tv, Ti))
 end
-=#

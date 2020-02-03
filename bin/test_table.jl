@@ -23,6 +23,7 @@ for mtx in [
                    SparseMatrix1DVBCs.NaturalPartitioner(),
                    SparseMatrix1DVBCs.OverlapPartitioner(0.9),
                    SparseMatrix1DVBCs.OptimalPartitioner(SparseMatrix1DVBCs.BlockRowMemoryCost(Float64, Int)),
+                   SparseMatrix1DVBCs.OptimalPartitioner(SparseMatrix1DVBCs.BlockRowTimeCost((1, 4, 8), Float64, Int)),
                   ]
         if method == nothing
             x = rand(size(A, 1))
