@@ -64,7 +64,8 @@ struct BlockRowTimeCost{Ws, Tv, Ti}
                     A = SparseMatrix1DVBC{Ws}(sparse(ones(Tv, m, n)), Partition{Ti}(spl, pos, ofs))
                     x = ones(Tv, m)
                     y = ones(Tv, n)
-                    t = time(@benchmark TrSpMV!($y, $A, $x) seconds=10 samples=100_000) / k
+                    TrSpMV!(y, A, x)
+                    t = (@belapsed TrSpMV!($y, $A, $x) evals=1_000) / k
                     push!(ts, t)
                     @info "w: $w m: $m k: $k t: $t"
                 end
@@ -92,7 +93,7 @@ end
 
 BlockRowTimeCost(Ws, Tv, Ti) = BlockRowTimeCost{Ws, Tv, Ti}()
 
-@inline (g::BlockRowTimeCost)(w, d)::Float64 = g.αs[w] + g.βs[w]*d
+Base.@propagate_inbounds (g::BlockRowTimeCost)(w, d)::Float64 = g.αs[w] + g.βs[w]*d
 
 Base.zero(g::BlockRowTimeCost) = zero(Float64)
 
