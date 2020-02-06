@@ -93,7 +93,7 @@ end
 
 BlockRowTimeCost(Ws, Tv, Ti) = BlockRowTimeCost{Ws, Tv, Ti}()
 
-#Base.@propagate_inbounds (g::BlockRowTimeCost)(w, d)::Float64 = g.αs[w] + g.βs[w]*d
+#Base.@propagate_inbounds (g::BlockRowTimeCost)(w, d)::Float64 = g.αs[w] + g.βs[w]*d #TODO
 @inline (g::BlockRowTimeCost)(w, d)::Float64 = g.αs[w] + g.βs[w]*d
 
 Base.zero(g::BlockRowTimeCost) = zero(Float64)
