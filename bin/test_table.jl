@@ -20,7 +20,7 @@ for mtx in [
     println(spy(A, maxwidth=50, maxheight=50, title="$mtx"))
     rows = []
     for method in [nothing,
-                   SparseMatrix1DVBCs.NaturalPartitioner(),
+                   SparseMatrix1DVBCs.StrictPartitioner(),
                    SparseMatrix1DVBCs.OverlapPartitioner(0.9),
                    SparseMatrix1DVBCs.OptimalPartitioner(SparseMatrix1DVBCs.BlockRowMemoryCost(Float64, Int)),
                    SparseMatrix1DVBCs.OptimalPartitioner(SparseMatrix1DVBCs.BlockRowTimeCost((1, 4, 8), Float64, Int)),
