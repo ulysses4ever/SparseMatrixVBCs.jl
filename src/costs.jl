@@ -85,8 +85,8 @@ struct BlockRowTimeCost{Ws, Tv, Ti}
             @info "βs: $βs"
             @info "done!"
             cache[BlockRowTimeCost{Ws, Tv, Ti}] = new{Ws, Tv, Ti}(αs, βs)
+            BSON.bson(cachefile, cache)
         end
-        BSON.bson(cachefile, cache)
         return cache[BlockRowTimeCost{Ws, Tv, Ti}]
     end
 end
