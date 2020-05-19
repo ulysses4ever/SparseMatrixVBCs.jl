@@ -1,6 +1,6 @@
 function partitioncost(g::G, A_prt::Partition) where {G}
     @inbounds begin
-        A_spl = A_prt.spl
+        A_spl = A_prt.Π
         A_pos = A_prt.pos
         k = length(s)
 
@@ -58,10 +58,10 @@ struct BlockRowTimeCost{Ws, Tv, Ti}
                 for m in ms
                     k = fld(mem_max, mem(w, max(m, 1)))
                     n = w * k
-                    spl = collect(Ti(1):Ti(w):Ti(n + 1))
-                    ofs = 1 .+ ((spl .- 1) .* m)
+                    Π = collect(Ti(1):Ti(w):Ti(n + 1))
+                    ofs = 1 .+ ((Π .- 1) .* m)
                     pos = 1 .+ (fld.((ofs .- 1), w))
-                    A = SparseMatrix1DVBC{Ws}(sparse(ones(Tv, m, n)), Partition{Ti}(spl, pos, ofs))
+                    A = SparseMatrix1DVBC{Ws}(sparse(ones(Tv, m, n)), Partition{Ti}(Π, pos, ofs))
                     x = ones(Tv, m)
                     y = ones(Tv, n)
                     TrSpMV!(y, A, x)

@@ -11,14 +11,14 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::StrictPartitioner)
 
         #hst = zeros(Int, m)
 
-        spl = Vector{Int}(undef, n + 1) # Column split locations
+        Π = Vector{Int}(undef, n + 1) # Column split locations
         pos = Vector{Int}(undef, n + 1) # Number of stored indices so far
         ofs = Vector{Int}(undef, n + 1) # Number of stored values so far
 
         c = A_pos[2] - A_pos[1] #The cardinality of the first column in the part
         j = 1
         k = 0
-        spl[1] = 1
+        Π[1] = 1
         pos[1] = 1
         ofs[1] = 1
         for j′ = 2:n
@@ -26,20 +26,20 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::StrictPartitioner)
             w = j′ - j #Current block size
             d = true
             if c == c′ && w != w_max
-                q′ = A_pos[j′]
-                for q = A_pos[j]:(A_pos[j + 1] - 1)
-                    if A_idx[q] != A_idx[q′]
+                r′ = A_pos[j′]
+                for r = A_pos[j]:(A_pos[j + 1] - 1)
+                    if A_idx[r] != A_idx[r′]
                         d = false
                         break
                     end
-                    q′ += 1
+                    r′ += 1
                 end
             else
                 d = false
             end
             if !d
                 k += 1
-                spl[k + 1] = j′
+                Π[k + 1] = j′
                 pos[k + 1] = pos[k] + c
                 ofs[k + 1] = ofs[k] + w * c
                 j = j′
@@ -49,15 +49,15 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::StrictPartitioner)
         j′ = n + 1
         w = j′ - j
         k += 1
-        spl[k + 1] = j′
+        Π[k + 1] = j′
         pos[k + 1] = pos[k] + c
         ofs[k + 1] = ofs[k] + w * c
 
-        resize!(spl, k + 1)
+        resize!(Π, k + 1)
         resize!(pos, k + 1)
         resize!(ofs, k + 1)
 
-        return Partition{Ti}(spl, pos, ofs)
+        return Partition{Ti}(Π, pos, ofs)
     end
 end
 
@@ -75,30 +75,30 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method::StrictPartiti
 
         k = length(B_prt)
 
-        spl = B_prt.spl
+        Π = B_prt.Π
         pos = B_prt.pos
         idx = Vector{Ti}(undef, pos[end] - 1)
         ofs = B_prt.ofs
         val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
-        for qq = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
-            val[qq] = zero(Tv)
+        for rr = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
+            val[rr] = zero(Tv)
         end
 
         A_q = ones(Int, max(Ws...))
 
         for p = 1:k
-            j = spl[p]
-            w = spl[p + 1] - j
+            j = Π[p]
+            w = Π[p + 1] - j
             @assert w <= max(Ws...)
-            for q = 0 : A_pos[j + 1] - A_pos[j] - 1
-                idx[pos[p] + q] = A_idx[A_pos[j] + q]
+            for r = 0 : A_pos[j + 1] - A_pos[j] - 1
+                idx[pos[p] + r] = A_idx[A_pos[j] + r]
             end
-            for j′ = spl[p] : (spl[p + 1] - 1)
-                for q = 0 : A_pos[j + 1] - A_pos[j] - 1
-                    val[ofs[p] + q * w + j′ - j] = A_val[A_pos[j′] + q]
+            for j′ = Π[p] : (Π[p + 1] - 1)
+                for r = 0 : A_pos[j + 1] - A_pos[j] - 1
+                    val[ofs[p] + r * w + j′ - j] = A_val[A_pos[j′] + r]
                 end
             end
         end
-        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, spl, pos, idx, ofs, val)
+        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, Π, pos, idx, ofs, val)
     end
 end

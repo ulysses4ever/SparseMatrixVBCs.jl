@@ -17,7 +17,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OptimalPartitioner
         hst = fill(n + 1, m) # hst is the last time we saw some nonzero
         cst = Vector{typeof(zero(g))}(undef, n + 1) # cst[j] is the best cost of a partition from j to n
         dsc = Vector{Int}(undef, n) # dsc[j] is the corresponding number of distinct nonzero entries in the part
-        spl = Vector{Int}(undef, n + 1)
+        Π = Vector{Int}(undef, n + 1)
 
         Δ[n + 1] = 0
         cst[n + 1] = zero(g)
@@ -45,7 +45,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OptimalPartitioner
             end
             cst[j] = best_c
             dsc[j] = best_d
-            spl[j] = best_j′
+            Π[j] = best_j′
         end
 
         pos = Vector{Int}(undef, n + 1)
@@ -55,18 +55,18 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OptimalPartitioner
         k = 0
         j = 1
         while j != n + 1
-            j′ = spl[j]
+            j′ = Π[j]
             w = j′ - j + 1
             k += 1
-            spl[k] = j
+            Π[k] = j
             pos[k + 1] = pos[k] + dsc[j]
             ofs[k + 1] = ofs[k] + w * dsc[j]
             j += w
         end
-        spl[k + 1] = j
-        resize!(spl, k + 1)
+        Π[k + 1] = j
+        resize!(Π, k + 1)
         resize!(pos, k + 1)
         resize!(ofs, k + 1)
-        return Partition{Ti}(spl, pos, ofs)
+        return Partition{Ti}(Π, pos, ofs)
     end
 end

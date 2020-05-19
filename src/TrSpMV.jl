@@ -34,10 +34,10 @@ end
         if W == 1
             return quote
                 tmp = zero(eltype(y))
-                qq = A_ofs[jj]
-                for q = A_pos[jj]:(A_pos[jj + 1] - 1)
-                    tmp += A_val[qq] * x[A_idx[q]]
-                    qq += 1
+                rr = A_ofs[jj]
+                for r = A_pos[jj]:(A_pos[jj + 1] - 1)
+                    tmp += A_val[rr] * x[A_idx[r]]
+                    rr += 1
                 end
                 y[i] = tmp
                 nothing
@@ -45,10 +45,10 @@ end
         else
             return quote
                 tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
-                qq = A_ofs[jj]
-                for q = A_pos[jj]:(A_pos[jj + 1] - 1)
-                    tmp += vload(Vec{$W, eltype(y)}, A_val, qq) * x[A_idx[q]]
-                    qq += w
+                rr = A_ofs[jj]
+                for r = A_pos[jj]:(A_pos[jj + 1] - 1)
+                    tmp += vload(Vec{$W, eltype(y)}, A_val, rr) * x[A_idx[r]]
+                    rr += w
                 end
                 vstore(tmp, y, i)
                 nothing
@@ -70,10 +70,10 @@ end
         if W == 1
             return quote
                 tmp = zero(eltype(y))
-                qq = A_ofs[jj]
-                for q = A_pos[jj]:(A_pos[jj + 1] - 1)
-                    tmp += A_val[qq] * x[A_idx[q]]
-                    qq += 1
+                rr = A_ofs[jj]
+                for r = A_pos[jj]:(A_pos[jj + 1] - 1)
+                    tmp += A_val[rr] * x[A_idx[r]]
+                    rr += 1
                 end
                 y[i] = tmp
                 nothing
@@ -81,10 +81,10 @@ end
         else
             return quote
                 tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
-                qq = A_ofs[jj]
-                for q = A_pos[jj]:(A_pos[jj + 1] - 1)
-                    tmp += vload(Vec{$W, eltype(y)}, A_val, qq) * x[A_idx[q]]
-                    qq += w
+                rr = A_ofs[jj]
+                for r = A_pos[jj]:(A_pos[jj + 1] - 1)
+                    tmp += vload(Vec{$W, eltype(y)}, A_val, rr) * x[A_idx[r]]
+                    rr += w
                 end
                 for Δi = 1:w
                     y[i + Δi - 1] = tmp[Δi]
@@ -101,7 +101,7 @@ end
             m = length(y)
             n = length(x)
             
-            A_spl = A.spl
+            A_spl = A.Π
             A_pos = A.pos
             A_idx = A.idx
             A_ofs = A.ofs

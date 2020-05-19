@@ -15,7 +15,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OverlapPartitioner
 
         hst = zeros(Int, m)
 
-        spl = Vector{Int}(undef, n + 1) # Column split locations
+        Π = Vector{Int}(undef, n + 1) # Column split locations
         pos = Vector{Int}(undef, n + 1) # Number of stored indices so far
         ofs = Vector{Int}(undef, n + 1) # Number of stored values so far
 
@@ -23,7 +23,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OverlapPartitioner
         c = A_pos[2] - A_pos[1] #The cardinality of the first column in the part
         j = 1
         k = 0
-        spl[1] = 1
+        Π[1] = 1
         pos[1] = 1
         ofs[1] = 1
         for i in @view A_idx[A_pos[1]:(A_pos[2] - 1)]
@@ -51,7 +51,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OverlapPartitioner
             w = j′ - j #Current block size
             if w == w_max || cc′ < ρ * min(c, c′)
                 k += 1
-                spl[k + 1] = j′
+                Π[k + 1] = j′
                 pos[k + 1] = pos[k] + d
                 ofs[k + 1] = ofs[k] + w * d
                 j = j′
@@ -63,13 +63,13 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OverlapPartitioner
         j′ = n + 1
         w = j′ - j
         k += 1
-        spl[k + 1] = j′
+        Π[k + 1] = j′
         pos[k + 1] = pos[k] + d
         ofs[k + 1] = ofs[k] + w * d
 
-        resize!(spl, k + 1)
+        resize!(Π, k + 1)
         resize!(pos, k + 1)
         resize!(ofs, k + 1)
-        return Partition{Ti}(spl, pos, ofs)
+        return Partition{Ti}(Π, pos, ofs)
     end
 end

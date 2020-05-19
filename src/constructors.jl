@@ -15,29 +15,29 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
 
         k = length(B_prt)
 
-        spl = B_prt.spl
+        Π = B_prt.Π
         pos = B_prt.pos
         idx = Vector{Ti}(undef, pos[end] - 1)
         ofs = B_prt.ofs
         val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
-        for qq = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
-            val[qq] = zero(Tv)
+        for rr = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
+            val[rr] = zero(Tv)
         end
 
         A_q = ones(Int, max(Ws...))
 
         for p = 1:k
-            j = spl[p]
-            w = spl[p + 1] - j
+            j = Π[p]
+            w = Π[p + 1] - j
             @assert w <= max(Ws...)
             if w == 1
-                qq = pos[p]
-                q = ofs[p]
+                rr = pos[p]
+                r = ofs[p]
                 for A_q_1 = A_pos[j]:(A_pos[j + w] - 1)
-                    idx[qq] = A_idx[A_q_1]
-                    val[q] = A_val[A_q_1]
-                    qq += 1
-                    q += 1
+                    idx[rr] = A_idx[A_q_1]
+                    val[r] = A_val[A_q_1]
+                    rr += 1
+                    r += 1
                 end
             else
                 i = m + 1
@@ -47,8 +47,8 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
                         i = min(i, A_idx[A_q[Δj]])
                     end
                 end
-                qq = pos[p]
-                q = ofs[p]
+                rr = pos[p]
+                r = ofs[p]
                 while i != m + 1
                     i′ = m + 1
                     for Δj = 1:w
@@ -62,15 +62,15 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
                                 i′ = min(i′, A_idx[A_q[Δj]])
                             end
                         end
-                        val[q] = tmp
-                        q += 1
+                        val[r] = tmp
+                        r += 1
                     end
-                    idx[qq] = i
-                    qq += 1
+                    idx[rr] = i
+                    rr += 1
                     i = i′
                 end
             end
         end
-        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, spl, pos, idx, ofs, val)
+        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, Π, pos, idx, ofs, val)
     end
 end
