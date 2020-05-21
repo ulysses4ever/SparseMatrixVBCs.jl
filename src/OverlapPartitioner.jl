@@ -22,7 +22,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OverlapPartitioner
         d = A_pos[2] - A_pos[1] #The number of distinct values in the part
         c = A_pos[2] - A_pos[1] #The cardinality of the first column in the part
         j = 1
-        k = 0
+        K = 0
         Π[1] = 1
         pos[1] = 1
         ofs[1] = 1
@@ -50,10 +50,10 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OverlapPartitioner
             end
             w = j′ - j #Current block size
             if w == w_max || cc′ < ρ * min(c, c′)
-                k += 1
-                Π[k + 1] = j′
-                pos[k + 1] = pos[k] + d
-                ofs[k + 1] = ofs[k] + w * d
+                K += 1
+                Π[K + 1] = j′
+                pos[K + 1] = pos[K] + d
+                ofs[K + 1] = ofs[K] + w * d
                 j = j′
                 d = c′
             else
@@ -62,14 +62,14 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OverlapPartitioner
         end
         j′ = n + 1
         w = j′ - j
-        k += 1
-        Π[k + 1] = j′
-        pos[k + 1] = pos[k] + d
-        ofs[k + 1] = ofs[k] + w * d
+        K += 1
+        Π[K + 1] = j′
+        pos[K + 1] = pos[K] + d
+        ofs[K + 1] = ofs[K] + w * d
 
-        resize!(Π, k + 1)
-        resize!(pos, k + 1)
-        resize!(ofs, k + 1)
+        resize!(Π, K + 1)
+        resize!(pos, K + 1)
+        resize!(ofs, K + 1)
         return Partition{Ti}(Π, pos, ofs)
     end
 end

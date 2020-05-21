@@ -13,31 +13,31 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
         A_idx = A.rowval
         A_val = A.nzval
 
-        k = length(B_prt)
+        K = length(B_prt)
 
         Π = B_prt.Π
         pos = B_prt.pos
         idx = Vector{Ti}(undef, pos[end] - 1)
         ofs = B_prt.ofs
         val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
-        for rr = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
-            val[rr] = zero(Tv)
+        for ll = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
+            val[ll] = zero(Tv)
         end
 
         A_q = ones(Int, max(Ws...))
 
-        for p = 1:k
+        for p = 1:K
             j = Π[p]
             w = Π[p + 1] - j
             @assert w <= max(Ws...)
             if w == 1
-                rr = pos[p]
-                r = ofs[p]
+                ll = pos[p]
+                l = ofs[p]
                 for A_q_1 = A_pos[j]:(A_pos[j + w] - 1)
-                    idx[rr] = A_idx[A_q_1]
-                    val[r] = A_val[A_q_1]
-                    rr += 1
-                    r += 1
+                    idx[ll] = A_idx[A_q_1]
+                    val[l] = A_val[A_q_1]
+                    ll += 1
+                    l += 1
                 end
             else
                 i = m + 1
@@ -47,8 +47,8 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
                         i = min(i, A_idx[A_q[Δj]])
                     end
                 end
-                rr = pos[p]
-                r = ofs[p]
+                ll = pos[p]
+                l = ofs[p]
                 while i != m + 1
                     i′ = m + 1
                     for Δj = 1:w
@@ -62,11 +62,11 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, B_prt::Partition{Ti})
                                 i′ = min(i′, A_idx[A_q[Δj]])
                             end
                         end
-                        val[r] = tmp
-                        r += 1
+                        val[l] = tmp
+                        l += 1
                     end
-                    idx[rr] = i
-                    rr += 1
+                    idx[ll] = i
+                    ll += 1
                     i = i′
                 end
             end

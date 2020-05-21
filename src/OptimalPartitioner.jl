@@ -52,21 +52,21 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::OptimalPartitioner
         pos[1] = 1
         ofs = Vector{Int}(undef, n + 1)
         ofs[1] = 1
-        k = 0
+        K = 0
         j = 1
         while j != n + 1
             j′ = Π[j]
             w = j′ - j + 1
-            k += 1
-            Π[k] = j
-            pos[k + 1] = pos[k] + dsc[j]
-            ofs[k + 1] = ofs[k] + w * dsc[j]
+            K += 1
+            Π[K] = j
+            pos[K + 1] = pos[K] + dsc[j]
+            ofs[K + 1] = ofs[K] + w * dsc[j]
             j += w
         end
-        Π[k + 1] = j
-        resize!(Π, k + 1)
-        resize!(pos, k + 1)
-        resize!(ofs, k + 1)
+        Π[K + 1] = j
+        resize!(Π, K + 1)
+        resize!(pos, K + 1)
+        resize!(ofs, K + 1)
         return Partition{Ti}(Π, pos, ofs)
     end
 end

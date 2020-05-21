@@ -17,7 +17,7 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::StrictPartitioner)
 
         c = A_pos[2] - A_pos[1] #The cardinality of the first column in the part
         j = 1
-        k = 0
+        K = 0
         Π[1] = 1
         pos[1] = 1
         ofs[1] = 1
@@ -26,36 +26,36 @@ function partition(A::SparseMatrixCSC{Tv, Ti}, w_max, method::StrictPartitioner)
             w = j′ - j #Current block size
             d = true
             if c == c′ && w != w_max
-                r′ = A_pos[j′]
-                for r = A_pos[j]:(A_pos[j + 1] - 1)
-                    if A_idx[r] != A_idx[r′]
+                l′ = A_pos[j′]
+                for l = A_pos[j]:(A_pos[j + 1] - 1)
+                    if A_idx[l] != A_idx[l′]
                         d = false
                         break
                     end
-                    r′ += 1
+                    l′ += 1
                 end
             else
                 d = false
             end
             if !d
-                k += 1
-                Π[k + 1] = j′
-                pos[k + 1] = pos[k] + c
-                ofs[k + 1] = ofs[k] + w * c
+                K += 1
+                Π[K + 1] = j′
+                pos[K + 1] = pos[K] + c
+                ofs[K + 1] = ofs[K] + w * c
                 j = j′
                 c = c′
             end
         end
         j′ = n + 1
         w = j′ - j
-        k += 1
-        Π[k + 1] = j′
-        pos[k + 1] = pos[k] + c
-        ofs[k + 1] = ofs[k] + w * c
+        K += 1
+        Π[K + 1] = j′
+        pos[K + 1] = pos[K] + c
+        ofs[K + 1] = ofs[K] + w * c
 
-        resize!(Π, k + 1)
-        resize!(pos, k + 1)
-        resize!(ofs, k + 1)
+        resize!(Π, K + 1)
+        resize!(pos, K + 1)
+        resize!(ofs, K + 1)
 
         return Partition{Ti}(Π, pos, ofs)
     end
@@ -73,29 +73,29 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method::StrictPartiti
         A_idx = A.rowval
         A_val = A.nzval
 
-        k = length(B_prt)
+        K = length(B_prt)
 
         Π = B_prt.Π
         pos = B_prt.pos
         idx = Vector{Ti}(undef, pos[end] - 1)
         ofs = B_prt.ofs
         val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
-        for rr = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
-            val[rr] = zero(Tv)
+        for ll = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
+            val[ll] = zero(Tv)
         end
 
         A_q = ones(Int, max(Ws...))
 
-        for p = 1:k
+        for p = 1:K
             j = Π[p]
             w = Π[p + 1] - j
             @assert w <= max(Ws...)
-            for r = 0 : A_pos[j + 1] - A_pos[j] - 1
-                idx[pos[p] + r] = A_idx[A_pos[j] + r]
+            for l = 0 : A_pos[j + 1] - A_pos[j] - 1
+                idx[pos[p] + l] = A_idx[A_pos[j] + l]
             end
             for j′ = Π[p] : (Π[p + 1] - 1)
-                for r = 0 : A_pos[j + 1] - A_pos[j] - 1
-                    val[ofs[p] + r * w + j′ - j] = A_val[A_pos[j′] + r]
+                for l = 0 : A_pos[j + 1] - A_pos[j] - 1
+                    val[ofs[p] + l * w + j′ - j] = A_val[A_pos[j′] + l]
                 end
             end
         end

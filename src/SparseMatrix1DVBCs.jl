@@ -24,8 +24,8 @@ struct SparseMatrix1DVBC{Ws, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
     ofs::Vector{Ti}
     val::Vector{Tv}
     function SparseMatrix1DVBC{Ws, Tv, Ti}(m::Integer, n::Integer, Π::Vector{Ti}, pos::Vector{Ti}, idx::Vector{Ti}, ofs::Vector{Ti}, val::Vector{Tv}) where {Ws, Tv, Ti<:Integer}
-        @noinline throwsz(str, lbl, k) =
-            throw(ArgumentError("number of $str ($lbl) must be ≥ 0, got $k"))
+        @noinline throwsz(str, lbl, K) =
+            throw(ArgumentError("number of $str ($lbl) must be ≥ 0, got $K"))
         m < 0 && throwsz("rows", 'm', m)
         n < 0 && throwsz("columns", 'n', n)
         Ws isa Tuple{Vararg{Int}} || throw(ArgumentError("Ws must be a tuple of integers"))
