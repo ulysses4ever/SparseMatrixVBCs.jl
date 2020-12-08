@@ -6,6 +6,7 @@ using BenchmarkTools
 using Cthulhu
 using UnicodePlots
 using PrettyTables
+using ChainPartitioners
 
 for mtx in [
             "Boeing/ct20stif",
@@ -20,12 +21,12 @@ for mtx in [
     println(spy(A, maxwidth=50, maxheight=50, title="$mtx"))
     rows = []
     for method in [nothing,
-                   SparseMatrix1DVBCs.StrictPartitioner(),
-                   SparseMatrix1DVBCs.OverlapPartitioner(0.9),
-                   SparseMatrix1DVBCs.OptimalPartitioner(SparseMatrix1DVBCs.BlockRowMemoryCost(Float64, Int)),
-                   SparseMatrix1DVBCs.OptimalPartitioner(SparseMatrix1DVBCs.BlockRowTimeCost((1, 4, 8), Float64, Int)),
-                   SparseMatrix1DVBCs.OptimalPartitioner(SparseMatrix1DVBCs.FixedBlockCost())
-                  ]
+        StrictChunker(8),
+        OverlapChunker(0.9, 8),
+        DynamicTotalChunker(model_SparseMatrix1DVBC_blocks(), 8),
+        DynamicTotalChunker(model_SparseMatrix1DVBC_memory(Float64, Int), 8),
+        DynamicTotalChunker(model_SparseMatrix1DVBC_time((1, 4, 8), Float64, Int), 8),
+    ]
         if method == nothing
             x = rand(size(A, 1))
             y = rand(size(A, 2))

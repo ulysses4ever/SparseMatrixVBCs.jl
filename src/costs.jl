@@ -10,15 +10,6 @@ struct SparseMatrix1DVBCTimeModel{Ws, Tv, Ti} <: AbstractNetCostModel
         if isfile(cachefile)
             cache = BSON.load(cachefile)
         end
-        #TODO delete this if block
-        if isfile(oldcachefile)
-            oldcache = BSON.load(oldcachefile)
-            @info "using old model"
-            if haskey(oldcache, BlockRowTimeCost{Ws, Tv, Ti}) 
-                old = oldcache[BlockRowTimeCost{Ws, Tv, Ti} ]
-                return new{Ws, Tv, Ti}(old.αs, old.βs)
-            end
-        end
         if !(SparseMatrix1DVBCTimeModel{Ws, Tv, Ti} in keys(cache))
             @info "calculating $(SparseMatrix1DVBCTimeModel{Ws, Tv, Ti}) model..."
 
@@ -33,9 +24,7 @@ struct SparseMatrix1DVBCTimeModel{Ws, Tv, Ti} <: AbstractNetCostModel
                     K = fld(mem_max, mem(w, w*m, m))
                     n = w * K
                     spl = collect(Ti(1):Ti(w):Ti(n + 1))
-                    ofs = 1 .+ ((spl .- 1) .* m)
-                    pos = 1 .+ (fld.((ofs .- 1), w))
-                    A = SparseMatrix1DVBC{Ws}(sparse(ones(Tv, m, n)), Partition{Ti}(spl, pos, ofs))
+                    A = SparseMatrix1DVBC{Ws}(sparse(ones(Tv, m, n)), SplitPartition{Ti}(length(spl) - 1, spl))
                     x = ones(Tv, m)
                     y = ones(Tv, n)
                     TrSpMV!(y, A, x)

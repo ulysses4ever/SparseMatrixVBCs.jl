@@ -41,16 +41,10 @@ end
 Base.size(A::SparseMatrix1DVBC) = (A.m, A.n)
 
 const cachefile = joinpath(@__DIR__(), "cache.bson")
-const oldcachefile = joinpath(@__DIR__(), "oldcache.bson")
 
 include("util.jl")
-include("Partitions.jl")
 include("TrSpMV.jl")
-include("old_costs.jl")
 include("costs.jl")
-include("StrictPartitioner.jl")
-include("OverlapPartitioner.jl")
-include("OptimalPartitioner.jl")
 include("constructors.jl")
 
 end # module
