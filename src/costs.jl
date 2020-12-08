@@ -1,67 +1,41 @@
-function partitioncost(g::G, A_prt::Partition) where {G}
-    @inbounds begin
-        A_spl = A_prt.Π
-        A_pos = A_prt.pos
-        K = length(s)
+model_SparseMatrix1DVBC_blocks() = AffineFillNetCostModel(0, 0, 0, 1)
 
-        c = zero(g)
-        for jj = 1:K
-            c += g(A_spl[jj + 1] - A_spl[jj], A_pos[jj + 1] - A_pos[jj])
-        end
-        return c
-    end
-end
+model_SparseMatrix1DVBC_memory(Tv, Ti) = AffineFillNetCostModel(3 * sizeof(Ti), 0, sizeof(Tv), sizeof(Ti))
 
-
-
-struct FixedBlockCost end
-
-Base.zero(::FixedBlockCost) = 0
-
-@inline (::FixedBlockCost)(w, d) = d
-
-
-
-struct BlockRowMemoryCost{Tv, Ti} end
-
-BlockRowMemoryCost(Tv, Ti) = BlockRowMemoryCost{Tv, Ti}()
-
-@inline (::BlockRowMemoryCost{Tv, Ti})(w, d) where {Tv, Ti} = 3 * sizeof(Ti) + d * (sizeof(Ti) + w * sizeof(Tv))
-
-Base.zero(g::BlockRowMemoryCost) = g(false, false)
-
-function Base.show(io::IO, g::BlockRowMemoryCost{Tv, Ti}) where {Tv, Ti}
-    print(io, "BlockRowMemoryCost")
-    print(io, (Tv, Ti))
-end
-
-
-
-struct BlockRowTimeCost{Ws, Tv, Ti}
+struct SparseMatrix1DVBCTimeModel{Ws, Tv, Ti} <: AbstractNetCostModel
     αs::Vector{Float64}
     βs::Vector{Float64}
-    function BlockRowTimeCost{Ws, Tv, Ti}() where {Ws, Tv, Ti}
+    function SparseMatrix1DVBCTimeModel{Ws, Tv, Ti}() where {Ws, Tv, Ti}
         cache = Dict()
         if isfile(cachefile)
             cache = BSON.load(cachefile)
         end
-        if !(BlockRowTimeCost{Ws, Tv, Ti} in keys(cache))
-            @info "calculating $(BlockRowTimeCost{Ws, Tv, Ti}) model..."
+        #TODO delete this if block
+        if isfile(oldcachefile)
+            oldcache = BSON.load(oldcachefile)
+            @info "using old model"
+            if haskey(oldcache, BlockRowTimeCost{Ws, Tv, Ti}) 
+                old = oldcache[BlockRowTimeCost{Ws, Tv, Ti} ]
+                return new{Ws, Tv, Ti}(old.αs, old.βs)
+            end
+        end
+        if !(SparseMatrix1DVBCTimeModel{Ws, Tv, Ti} in keys(cache))
+            @info "calculating $(SparseMatrix1DVBCTimeModel{Ws, Tv, Ti}) model..."
 
             αs = Float64[]
             βs = Float64[]
             ms = [1, 2, 3, 4, 5, 6, 7, 8]
             mem_max = fld(first(filter(t->t.type_==:L1Cache, collect(Hwloc.topology_load()))).attr.size, 2) #Half the L1 cache size. Could be improved.
-            mem = BlockRowMemoryCost{Tv, Ti}()
+            mem = model_SparseMatrix1DVBC_memory(Tv, Ti)
             for w in 1:max(Ws...)
                 ts = Float64[]
                 for m in ms
-                    K = fld(mem_max, mem(w, max(m, 1)))
+                    K = fld(mem_max, mem(w, w*m, m))
                     n = w * K
-                    Π = collect(Ti(1):Ti(w):Ti(n + 1))
-                    ofs = 1 .+ ((Π .- 1) .* m)
+                    spl = collect(Ti(1):Ti(w):Ti(n + 1))
+                    ofs = 1 .+ ((spl .- 1) .* m)
                     pos = 1 .+ (fld.((ofs .- 1), w))
-                    A = SparseMatrix1DVBC{Ws}(sparse(ones(Tv, m, n)), Partition{Ti}(Π, pos, ofs))
+                    A = SparseMatrix1DVBC{Ws}(sparse(ones(Tv, m, n)), Partition{Ti}(spl, pos, ofs))
                     x = ones(Tv, m)
                     y = ones(Tv, n)
                     TrSpMV!(y, A, x)
@@ -84,20 +58,20 @@ struct BlockRowTimeCost{Ws, Tv, Ti}
             @info "αs: $αs"
             @info "βs: $βs"
             @info "done!"
-            cache[BlockRowTimeCost{Ws, Tv, Ti}] = new{Ws, Tv, Ti}(αs, βs)
+            cache[SparseMatrix1DVBCTimeModel{Ws, Tv, Ti}] = new{Ws, Tv, Ti}(αs, βs)
             BSON.bson(cachefile, cache)
         end
-        return cache[BlockRowTimeCost{Ws, Tv, Ti}]
+        return cache[SparseMatrix1DVBCTimeModel{Ws, Tv, Ti}]
     end
 end
 
-BlockRowTimeCost(Ws, Tv, Ti) = BlockRowTimeCost{Ws, Tv, Ti}()
+Base.@propagate_inbounds (mdl::SparseMatrix1DVBCTimeModel)(x_width, x_work, x_net)::Float64 = mdl.αs[x_width] + mdl.βs[x_width]*x_net
 
-Base.@propagate_inbounds (g::BlockRowTimeCost)(w, d)::Float64 = g.αs[w] + g.βs[w]*d
+ChainPartitioners.cost_type(::Type{SparseMatrix1DVBCTimeModel{Ws, Tv, Ti}}) where {Ws, Tv, Ti} = Float64
 
-Base.zero(g::BlockRowTimeCost) = zero(Float64)
+model_SparseMatrix1DVBC_time(Ws, Tv, Ti) = SparseMatrix1DVBCTimeModel{Ws, Tv, Ti}()
 
-function Base.show(io::IO, ::BlockRowTimeCost{Ws, Tv, Ti}) where {Ws, Tv, Ti}
-    print(io, "BlockRowTimeCost")
+function Base.show(io::IO, ::SparseMatrix1DVBCTimeModel{Ws, Tv, Ti}) where {Ws, Tv, Ti}
+    print(io, "SparseMatrix1DVBCTimeModel")
     print(io, (Ws, Tv, Ti))
 end

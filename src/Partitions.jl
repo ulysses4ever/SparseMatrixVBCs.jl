@@ -1,3 +1,4 @@
+#TODO this whole file on the chopping block
 struct Partition{Ti}
     Π::Vector{Ti}
     pos::Vector{Ti}

@@ -44,7 +44,7 @@ for mtx in [
             y = rand(size(A, 2))
             z = A' * x
 
-            mem = sizeof(B.Π) + sizeof(B.pos) + sizeof(B.idx) + sizeof(B.ofs) + sizeof(B.val)
+            mem = sizeof(B.spl) + sizeof(B.pos) + sizeof(B.idx) + sizeof(B.ofs) + sizeof(B.val)
 
             run_time = time(@benchmark TrSpMV!($y, $B, $x))
 

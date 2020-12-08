@@ -1,3 +1,4 @@
+#TODO this whole file on the chopping block
 struct OptimalPartitioner{G}
     g::G
 end

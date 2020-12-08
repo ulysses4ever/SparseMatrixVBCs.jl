@@ -101,7 +101,7 @@ end
             m = length(y)
             n = length(x)
             
-            A_spl = A.Π
+            A_spl = A.spl
             A_pos = A.pos
             A_idx = A.idx
             A_ofs = A.ofs
