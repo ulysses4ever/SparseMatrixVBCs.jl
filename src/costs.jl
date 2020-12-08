@@ -40,7 +40,7 @@ struct SparseMatrix1DVBCTimeModel{Ws, Tv, Ti} <: AbstractNetCostModel
                 push!(βs, β)
                 @info "w: $w α: $α β: $β"
             end
-            for w in max(Ws...) -1:-1:1
+            for w in max(Ws...) - 1 : -1 : 1
                 αs[w] = min(αs[w], αs[w + 1])
                 βs[w] = min(βs[w], βs[w + 1])
             end
