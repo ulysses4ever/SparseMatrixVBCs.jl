@@ -25,21 +25,21 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, Φ::SplitPartition{Ti
         hst = zeros(Ti, m + 1)
         A_pos = A.colptr
         A_idx = A.rowval
-        K = length(Φ)
-        pos = undefs(Ti, K + 1)
-        ofs = undefs(Ti, K + 1)
+        L = length(Φ)
+        pos = undefs(Ti, L + 1)
+        ofs = undefs(Ti, L + 1)
         pos[1] = 1
         ofs[1] = 1
-        for k = 1:K
-            pos[k + 1] = pos[k]
-            j = Φ.spl[k]
-            j′ = Φ.spl[k + 1]
+        for l = 1:L
+            pos[l + 1] = pos[l]
+            j = Φ.spl[l]
+            j′ = Φ.spl[l + 1]
             for q = A_pos[j]:A_pos[j′] - 1
                 i = A_idx[q]
-                pos[k + 1] += (hst[i] < k)
-                hst[i] = k
+                pos[l + 1] += (hst[i] < l)
+                hst[i] = l
             end
-            ofs[k + 1] = ofs[k] + (pos[k + 1] - pos[k]) * (j′ - j)
+            ofs[l + 1] = ofs[l] + (pos[l + 1] - pos[l]) * (j′ - j)
         end
         return _construct_SparseMatrix1DVBC(Val(Ws), A, Φ, pos, ofs)
     end
