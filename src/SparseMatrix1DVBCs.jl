@@ -17,7 +17,7 @@ export TrSpMV!
 """
     SparseMatrix1DVBC{Ws, Tv,Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
 Matrix type for storing sparse matrices in the
-Variably Compressed Column Compressed Sparse Column format.
+One-Dimensional Variable Block Column format.
 """
 struct SparseMatrix1DVBC{Ws, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
     m::Int
@@ -40,11 +40,40 @@ end
 
 Base.size(A::SparseMatrix1DVBC) = (A.m, A.n)
 
+"""
+    SparseMatrixVBC{Ws, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
+Matrix type for storing sparse matrices in the
+Variable Block Column format.
+"""
+struct SparseMatrixVBC{Us, Ws, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
+    m::Int
+    n::Int
+    spl::Vector{Ti}
+    tpl::Vector{Ti}
+    pos::Vector{Ti}
+    idx::Vector{Ti}
+    ofs::Vector{Ti}
+    val::Vector{Tv}
+    function SparseMatrixVBC{Us, Ws, Tv, Ti}(m::Integer, n::Integer, spl::Vector{Ti}, tpl::Vector{Ti}, pos::Vector{Ti}, idx::Vector{Ti}, ofs::Vector{Ti}, val::Vector{Tv}) where {Us, Ws, Tv, Ti<:Integer}
+        @noinline throwsz(str, lbl, K) =
+            throw(ArgumentError("number of $str ($lbl) must be ≥ 0, got $K"))
+        m < 0 && throwsz("rows", 'm', m)
+        n < 0 && throwsz("columns", 'n', n)
+        Ws isa Tuple{Vararg{Int}} || throw(ArgumentError("Ws must be a tuple of integers"))
+        minimum(Us) > 0 || throw(ArgumentError("Us must be > 0"))
+        minimum(Ws) > 0 || throw(ArgumentError("Ws must be > 0"))
+        new(m, n, spl, tpl, pos, idx, ofs, val)
+    end
+end
+
+Base.size(A::SparseMatrixVBC) = (A.m, A.n)
+
 const cachefile = joinpath(@__DIR__(), "cache.bson")
 
 include("util.jl")
 include("TrSpMV.jl")
 include("costs.jl")
-include("constructors.jl")
+include("constructors_1DVBC.jl")
+#include("constructors_VBC.jl")
 
 end # module
