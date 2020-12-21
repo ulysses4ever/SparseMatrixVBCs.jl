@@ -127,36 +127,36 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method::StrictChunker
         A_idx = A.rowval
         A_val = A.nzval
 
-        K = length(Φ)
+        L = length(Φ)
         spl = Φ.spl
-        pos = undefs(Ti, K + 1)
-        ofs = undefs(Ti, K + 1)
+        pos = undefs(Ti, L + 1)
+        ofs = undefs(Ti, L + 1)
         pos[1] = 1
         ofs[1] = 1
-        for k = 1:K
-            j = spl[k]
-            j′ = spl[k + 1]
-            pos[k + 1] = pos[k] + A_pos[min(j + 1, j′)] - A_pos[j]
-            ofs[k + 1] = A_pos[j′]
+        for l = 1:L
+            j = spl[l]
+            j′ = spl[l + 1]
+            pos[l + 1] = pos[l] + A_pos[min(j + 1, j′)] - A_pos[j]
+            ofs[l + 1] = A_pos[j′]
         end
         idx = Vector{Ti}(undef, pos[end] - 1)
         val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
-        for ll = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
-            val[ll] = zero(Tv)
+        for q = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
+            val[q] = zero(Tv)
         end
 
         A_q = ones(Int, max(Ws...))
 
-        for p = 1:K
-            j = spl[p]
-            w = spl[p + 1] - j
+        for l = 1:L
+            j = spl[l]
+            w = spl[l + 1] - j
             @assert w <= max(Ws...)
-            for l = 0 : A_pos[j + 1] - A_pos[j] - 1
-                idx[pos[p] + l] = A_idx[A_pos[j] + l]
+            for Q = 0 : A_pos[j + 1] - A_pos[j] - 1
+                idx[pos[l] + Q] = A_idx[A_pos[j] + Q]
             end
-            for j′ = spl[p] : (spl[p + 1] - 1)
-                for l = 0 : A_pos[j + 1] - A_pos[j] - 1
-                    val[ofs[p] + l * w + j′ - j] = A_val[A_pos[j′] + l]
+            for j′ = spl[l] : (spl[l + 1] - 1)
+                for Q = 0 : A_pos[j + 1] - A_pos[j] - 1
+                    val[ofs[l] + Q * w + j′ - j] = A_val[A_pos[j′] + Q]
                 end
             end
         end
