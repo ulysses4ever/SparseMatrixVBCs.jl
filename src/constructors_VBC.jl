@@ -47,7 +47,7 @@ function SparseMatrixVBC{Us, Ws}(A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartition{
     end
 end
 
-function _construct_SparseMatrix1DVBC(::Val{Us}, ::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartition{Ti}, Φ::SplitPartition{Ti}, pos::Vector{Ti}, ofs::Vector{Ti}) where {Us, Ws, Tv, Ti}
+function _construct_SparseMatrixVBC(::Val{Us}, ::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Π, Φ, pos::Vector{Ti}, ofs::Vector{Ti}) where {Ws, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
@@ -59,111 +59,91 @@ function _construct_SparseMatrix1DVBC(::Val{Us}, ::Val{Ws}, A::SparseMatrixCSC{T
 
         K = length(Π)
         L = length(Φ)
+        Π_spl = convert(SplitPartition, Π).spl
+        Π_asg = convert(MapPartition, Π).asg
+        Φ_spl = convert(SplitPartition, Φ).spl
 
         idx = Vector{Ti}(undef, pos[end] - 1)
-        val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
-        for ll = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
-            val[ll] = zero(Tv)
+        val = Vector{Tv}(undef, ofs[end] - 1 + max(Us...) * max(Ws...))
+        for Q = ofs[end] : ofs[end]  - 1 + max(Us...) * max(Ws...) #extra crap at the end keeps vector access in bounds 
+            val[Q] = zero(Tv)
         end
 
         A_q = ones(Int, max(Ws...))
 
+        for k = 1:K
+            @assert Π_spl[k + 1] - Π_spl[k] <= max(Us...)
+        end
+
         for l = 1:L
-            j = Φ.spl[l]
-            j′ = Φ.spl[l + 1]
-            w = j′ - j
+            j = Φ_spl[l]
+            w = Φ_spl[l + 1] - j
             @assert w <= max(Ws...)
             if w == 1
-            @assert u <= max(Us...)
-                ll = pos[p]
-                l = ofs[p]
-                for A_q_1 = A_pos[j]:(A_pos[j + w] - 1)
-                    idx[ll] = A_idx[A_q_1]
-                    val[l] = A_val[A_q_1]
-                    ll += 1
-                    l += 1
+                Q = pos[l]
+                q = ofs[l]
+                A_q_1 = A_pos[j]
+                while A_q_1 < A_pos[j + 1]
+                    k = Π_asg[A_idx[A_q_1]]
+                    for i = Π_spl[k] : Π_spl[k + 1] - 1
+                        if A_q_1 < A_pos[j + 1] && A_idx[A_q_1] == i
+                            val[q] = A_val[A_q_1]
+                            A_q_1 += 1
+                        else
+                            val[q] = zero(Tv)
+                        end
+                        q += 1
+                    end
+                    idx[Q] = k
+                    Q += 1
                 end
             else
-                i = m + 1
+                k = K + 1
                 for Δj = 1:w
                     A_q[Δj] = A_pos[j + Δj - 1]
                     if A_q[Δj] < A_pos[j + Δj]
-                        i = min(i, A_idx[A_q[Δj]])
+                        k = min(k, Π.asg[A_idx[A_q[Δj]]])
                     end
                 end
-                qq = pos[p]
-                q = ofs[p]
-                while i != m + 1
-                    i′ = m + 1
-                    for Δj = 1:w
-                        tmp = zero(Tv)
-                        if A_q[Δj] < A_pos[j + Δj]
-                            if A_idx[A_q[Δj]] == i
-                                tmp = A_val[A_q[Δj]] 
+                Q = pos[l]
+                q = ofs[l]
+                while k != K + 1
+                    for i = Π_spl[k] : Π_spl[k + 1] - 2
+                        for Δj = 1:w
+                            if A_q[Δj] < A_pos[j + Δj] && A_idx[A_q[Δj]] == i
+                                val[q] = A_val[A_q[Δj]] 
                                 A_q[Δj] += 1
+                            else
+                                val[q] = zero(Tv)
                             end
-                            if A_q[Δj] < A_pos[j + Δj]
-                                i′ = min(i′, A_idx[A_q[Δj]])
-                            end
+                            q += 1
                         end
-                        val[q] = tmp
-                        q += 1
                     end
-                    idx[qq] = i
-                    qq += 1
-                    i = i′
+                    k′ = K + 1
+                    let i = Π.spl[k + 1] - 1
+                        for Δj = 1:w
+                            if A_q[Δj] < A_pos[j + Δj]
+                                if A_idx[A_q[Δj]] == i
+                                    val[q] = A_val[A_q[Δj]] 
+                                    A_q[Δj] += 1
+                                else
+                                    val[q] = zero(Tv)
+                                end
+                                if A_q[Δj] < A_pos[j + Δj]
+                                    k′ = min(k′, Π.asg[A_idx[A_q[Δj]]])
+                                end
+                            else
+                                val[q] = zero(Tv)
+                            end
+                            q += 1
+                        end
+                    end
+                    idx[Q] = k
+                    Q += 1
+                    k = k′
                 end
             end
         end
-        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, spl, pos, idx, ofs, val)
-    end
-end
-
-function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method::StrictChunker) where {Ws, Tv, Ti}
-    @inbounds begin
-        # matrix notation...
-        # i = 1:m rows, j = 1:n columns
-        m, n = size(A)
-
-        Φ = pack_stripe(A, method)
-
-        A_pos = A.colptr
-        A_idx = A.rowval
-        A_val = A.nzval
-
-        K = length(Φ)
-        spl = Φ.spl
-        pos = undefs(Ti, K + 1)
-        ofs = undefs(Ti, K + 1)
-        pos[1] = 1
-        ofs[1] = 1
-        for k = 1:K
-            j = spl[k]
-            j′ = spl[k + 1]
-            pos[k + 1] = pos[k] + A_pos[min(j + 1, j′)] - A_pos[j]
-            ofs[k + 1] = A_pos[j′]
-        end
-        idx = Vector{Ti}(undef, pos[end] - 1)
-        val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
-        for ll = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
-            val[ll] = zero(Tv)
-        end
-
-        A_q = ones(Int, max(Ws...))
-
-        for p = 1:K
-            j = spl[p]
-            w = spl[p + 1] - j
-            @assert w <= max(Ws...)
-            for l = 0 : A_pos[j + 1] - A_pos[j] - 1
-                idx[pos[p] + l] = A_idx[A_pos[j] + l]
-            end
-            for j′ = spl[p] : (spl[p + 1] - 1)
-                for l = 0 : A_pos[j + 1] - A_pos[j] - 1
-                    val[ofs[p] + l * w + j′ - j] = A_val[A_pos[j′] + l]
-                end
-            end
-        end
-        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, spl, pos, idx, ofs, val)
+        return SparseMatrixVBC{Us, Ws, Tv, Ti}(m, n, Π_spl, Π_asg, Φ_spl, pos, idx, ofs, val)
     end
 end

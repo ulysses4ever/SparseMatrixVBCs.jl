@@ -92,17 +92,19 @@ function _construct_SparseMatrix1DVBC(::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Φ:
                 while i != m + 1
                     i′ = m + 1
                     for Δj = 1:w
-                        tmp = zero(Tv)
                         if A_q[Δj] < A_pos[j + Δj]
                             if A_idx[A_q[Δj]] == i
-                                tmp = A_val[A_q[Δj]] 
+                                val[q] = A_val[A_q[Δj]] 
                                 A_q[Δj] += 1
+                            else
+                                val[q] = zero(Tv)
                             end
                             if A_q[Δj] < A_pos[j + Δj]
                                 i′ = min(i′, A_idx[A_q[Δj]])
                             end
+                        else
+                            val[q] = zero(Tv)
                         end
-                        val[q] = tmp
                         q += 1
                     end
                     idx[Q] = i
