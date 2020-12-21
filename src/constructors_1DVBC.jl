@@ -4,16 +4,16 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method=DynamicTotalCh
     if length(x_net) == 0
         return SparseMatrix1DVBC{Ws}(A, Φ)
     else
-        K = length(Φ)
+        L = length(Φ)
         Φ = convert(SplitPartition, Φ)
         spl = Φ.spl
-        pos = undefs(Ti, K + 1)
-        ofs = undefs(Ti, K + 1)
+        pos = undefs(Ti, L + 1)
+        ofs = undefs(Ti, L + 1)
         pos[1] = 1
         ofs[1] = 1
-        for k = 1:K
-            pos[k + 1] = pos[k] + x_net[][k]
-            ofs[k + 1] = ofs[k] + x_net[][k] * (spl[k + 1] - spl[k])
+        for l = 1:L
+            pos[l + 1] = pos[l] + x_net[][l]
+            ofs[l + 1] = ofs[l] + x_net[][l] * (spl[l + 1] - spl[l])
         end
         return _construct_SparseMatrix1DVBC(Val(Ws), A, Φ, pos, ofs)
     end
