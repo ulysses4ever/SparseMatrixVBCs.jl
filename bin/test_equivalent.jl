@@ -16,6 +16,9 @@ for mtx in [
            ]
     A = permutedims(1.0 * sparse(mdopen(mtx).A))
 
+    display(dump(model_SparseMatrix1DVBC_time((1, 4, 8), Float64, Int)))
+    println()
+
     println()
     println()
     println(spy(A, maxwidth=50, maxheight=50, title="$mtx"))
