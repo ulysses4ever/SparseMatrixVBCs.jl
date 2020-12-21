@@ -55,29 +55,29 @@ function _construct_SparseMatrix1DVBC(::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Φ:
         A_idx = A.rowval
         A_val = A.nzval
 
-        K = length(Φ)
+        L = length(Φ)
         spl = Φ.spl
 
         idx = Vector{Ti}(undef, pos[end] - 1)
         val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
-        for ll = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
-            val[ll] = zero(Tv)
+        for Q = ofs[end] : ofs[end]  - 1 + max(Ws...) #extra crap at the end keeps vector access in bounds 
+            val[Q] = zero(Tv)
         end
 
         A_q = ones(Int, max(Ws...))
 
-        for p = 1:K
-            j = spl[p]
-            w = spl[p + 1] - j
+        for l = 1:L
+            j = spl[l]
+            w = spl[l + 1] - j
             @assert w <= max(Ws...)
             if w == 1
-                ll = pos[p]
-                l = ofs[p]
+                Q = pos[l]
+                q = ofs[l]
                 for A_q_1 = A_pos[j]:(A_pos[j + w] - 1)
-                    idx[ll] = A_idx[A_q_1]
-                    val[l] = A_val[A_q_1]
-                    ll += 1
-                    l += 1
+                    idx[Q] = A_idx[A_q_1]
+                    val[q] = A_val[A_q_1]
+                    Q += 1
+                    q += 1
                 end
             else
                 i = m + 1
@@ -87,8 +87,8 @@ function _construct_SparseMatrix1DVBC(::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Φ:
                         i = min(i, A_idx[A_q[Δj]])
                     end
                 end
-                ll = pos[p]
-                l = ofs[p]
+                Q = pos[l]
+                q = ofs[l]
                 while i != m + 1
                     i′ = m + 1
                     for Δj = 1:w
@@ -102,11 +102,11 @@ function _construct_SparseMatrix1DVBC(::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Φ:
                                 i′ = min(i′, A_idx[A_q[Δj]])
                             end
                         end
-                        val[l] = tmp
-                        l += 1
+                        val[q] = tmp
+                        q += 1
                     end
-                    idx[ll] = i
-                    ll += 1
+                    idx[Q] = i
+                    Q += 1
                     i = i′
                 end
             end
