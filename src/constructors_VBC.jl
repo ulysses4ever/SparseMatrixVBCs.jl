@@ -32,6 +32,7 @@ function SparseMatrixVBC{U_max, Ws}(A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartiti
         pos[1] = 1
         ofs[1] = 1
         for l = 1:L
+            ofs[l + 1] = ofs[l]
             pos[l + 1] = pos[l]
             j = Φ_spl_[l]
             j′ = Φ_spl_[l + 1]
@@ -41,11 +42,11 @@ function SparseMatrixVBC{U_max, Ws}(A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartiti
                 k = Π_asg_[i]
                 if hst[k] < l
                     u = Π_spl_[k + 1] - Π_spl_[k]
-                    pos[l + 1] += u
+                    pos[l + 1] += 1
+                    ofs[l + 1] += u * w
                 end
                 hst[k] = l
             end
-            ofs[l + 1] = ofs[l] + (pos[l + 1] - pos[l]) * w
         end
         return _construct_SparseMatrixVBC(Val(U_max), Val(Ws), A, Π, Φ, Π_asg, pos, ofs)
     end

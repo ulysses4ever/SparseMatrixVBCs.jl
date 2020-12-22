@@ -41,8 +41,6 @@ include("matrices.jl")
         ]
             (m, n) = size(A)
             B = SparseMatrixVBC{4, (1, 2, 4)}(A, method)
-            display(dump(A))
-            display(dump(B))
             x = zeros(eltype(A), m)
             y_ref = Vector{eltype(A)}(undef, n)
             y_test = Vector{eltype(A)}(undef, n)

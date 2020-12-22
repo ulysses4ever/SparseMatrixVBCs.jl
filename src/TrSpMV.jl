@@ -202,7 +202,7 @@ using MacroTools
             for Δj = 1:U-1
                 thk = quote
                     $thk
-                    tmp += A_val[q] * x[j + $Δj]
+                    tmp += A_val[q + $Δj] * x[j + $Δj]
                 end
             end
         else
@@ -210,7 +210,7 @@ using MacroTools
             for Δj = 1:U-1
                 thk = quote
                     $thk
-                    tmp += vload(Vec{$W, eltype(y)}, A_val, q) * x[j + $Δj]
+                    tmp += vload(Vec{$W, eltype(y)}, A_val, q + w * $Δj) * x[j + $Δj]
                 end
             end
         end
@@ -230,15 +230,18 @@ using MacroTools
             A_idx = A.idx
             A_ofs = A.ofs
             A_val = A.val
-            L = length(A.Φ) - 1
+            L = length(A.Φ)
             L_safe = L
             while L_safe > 1 && n + 1 - Φ_spl[L_safe] < $(max(Ws...)) L_safe -= 1 end
-            for l = 1:L_safe
+            #=
+            for l = 1:(L_safe - 1)
                 i = Φ_spl[l]
                 w = Φ_spl[l + 1] - i
                 $(stripe_nest(true))
             end
-            for l = L_safe:L
+            =#
+            #for l = L_safe:L
+            for l = 1:L
                 i = Φ_spl[l]
                 w = Φ_spl[l + 1] - i
                 $(stripe_nest(false))
