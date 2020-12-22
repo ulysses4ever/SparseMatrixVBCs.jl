@@ -46,7 +46,7 @@ Base.size(A::SparseMatrix1DVBC) = (A.m, A.n)
 Matrix type for storing sparse matrices in the
 Variable Block Column format.
 """
-struct SparseMatrixVBC{Us, Ws, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
+struct SparseMatrixVBC{U_max, Ws, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
     m::Int
     n::Int
     Π::SplitPartition{Ti}

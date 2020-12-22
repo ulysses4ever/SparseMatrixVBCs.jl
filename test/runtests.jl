@@ -40,7 +40,9 @@ include("matrices.jl")
             AlternatingPacker(OverlapChunker(0.9, 4), OverlapChunker(0.9, 4)),
         ]
             (m, n) = size(A)
-            B = SparseMatrixVBC{(1, 2, 4), (1, 2, 4)}(A, method)
+            B = SparseMatrixVBC{4, (1, 2, 4)}(A, method)
+            display(dump(A))
+            display(dump(B))
             x = zeros(eltype(A), m)
             y_ref = Vector{eltype(A)}(undef, n)
             y_test = Vector{eltype(A)}(undef, n)
@@ -48,9 +50,9 @@ include("matrices.jl")
                 x[i] = true
                 fill!(y_ref, false)
                 fill!(y_test, false)
-                #TrSpMV!(y_ref, A, x) 
-                #TrSpMV!(y_test, B, x) 
-                #@test y_ref == y_test
+                TrSpMV!(y_ref, A, x) 
+                TrSpMV!(y_test, B, x) 
+                @test y_ref == y_test
                 x[i] = false
             end
         end
