@@ -233,15 +233,12 @@ using MacroTools
             L = length(A.Φ)
             L_safe = L
             while L_safe > 1 && n + 1 - Φ_spl[L_safe] < $(max(Ws...)) L_safe -= 1 end
-            #=
             for l = 1:(L_safe - 1)
                 i = Φ_spl[l]
                 w = Φ_spl[l + 1] - i
                 $(stripe_nest(true))
             end
-            =#
-            #for l = L_safe:L
-            for l = 1:L
+            for l = L_safe:L
                 i = Φ_spl[l]
                 w = Φ_spl[l + 1] - i
                 $(stripe_nest(false))
@@ -249,6 +246,5 @@ using MacroTools
             return y
         end
     end
-    println(MacroTools.prettify(thunk))
     return thunk
 end
