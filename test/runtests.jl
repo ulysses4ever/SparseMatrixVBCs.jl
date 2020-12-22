@@ -35,5 +35,24 @@ include("matrices.jl")
                 x[i] = false
             end
         end
+        for method in [
+            AlternatingPacker(StrictChunker(4), StrictChunker(4)),
+            AlternatingPacker(OverlapChunker(0.9, 4), OverlapChunker(0.9, 4)),
+        ]
+            (m, n) = size(A)
+            B = SparseMatrixVBC{(1, 2, 4), (1, 2, 4)}(A, method)
+            x = zeros(eltype(A), m)
+            y_ref = Vector{eltype(A)}(undef, n)
+            y_test = Vector{eltype(A)}(undef, n)
+            for i = 1:m
+                x[i] = true
+                fill!(y_ref, false)
+                fill!(y_test, false)
+                #TrSpMV!(y_ref, A, x) 
+                #TrSpMV!(y_test, B, x) 
+                #@test y_ref == y_test
+                x[i] = false
+            end
+        end
     end
 end

@@ -12,6 +12,7 @@ export model_SparseMatrix1DVBC_blocks
 export model_SparseMatrix1DVBC_memory
 export model_SparseMatrix1DVBC_time
 export SparseMatrix1DVBC
+export SparseMatrixVBC
 export TrSpMV!
 
 """
@@ -48,21 +49,22 @@ Variable Block Column format.
 struct SparseMatrixVBC{Us, Ws, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
     m::Int
     n::Int
-    spl::Vector{Ti}
-    tpl::Vector{Ti}
+    Π::SplitPartition{Ti}
+    Φ::SplitPartition{Ti}
+    Π_asg::MapPartition{Ti}
     pos::Vector{Ti}
     idx::Vector{Ti}
     ofs::Vector{Ti}
     val::Vector{Tv}
-    function SparseMatrixVBC{Us, Ws, Tv, Ti}(m::Integer, n::Integer, spl::Vector{Ti}, tpl::Vector{Ti}, pos::Vector{Ti}, idx::Vector{Ti}, ofs::Vector{Ti}, val::Vector{Tv}) where {Us, Ws, Tv, Ti<:Integer}
-        @noinline throwsz(str, lbl, K) =
-            throw(ArgumentError("number of $str ($lbl) must be ≥ 0, got $K"))
+    function SparseMatrixVBC{Us, Ws, Tv, Ti}(m::Integer, n::Integer, Π::SplitPartition{Ti}, Φ::SplitPartition{Ti}, Π_asg::MapPartition{Ti}, pos::Vector{Ti}, idx::Vector{Ti}, ofs::Vector{Ti}, val::Vector{Tv}) where {Us, Ws, Tv, Ti<:Integer}
+        @noinline throwsz(str, lbl, x) =
+            throw(ArgumentError("number of $str ($lbl) must be ≥ 0, got $x"))
         m < 0 && throwsz("rows", 'm', m)
         n < 0 && throwsz("columns", 'n', n)
         Ws isa Tuple{Vararg{Int}} || throw(ArgumentError("Ws must be a tuple of integers"))
         minimum(Us) > 0 || throw(ArgumentError("Us must be > 0"))
         minimum(Ws) > 0 || throw(ArgumentError("Ws must be > 0"))
-        new(m, n, spl, tpl, pos, idx, ofs, val)
+        new(m, n, Π, Φ, Π_asg, pos, idx, ofs, val)
     end
 end
 
@@ -74,6 +76,6 @@ include("util.jl")
 include("TrSpMV.jl")
 include("costs.jl")
 include("constructors_1DVBC.jl")
-#include("constructors_VBC.jl")
+include("constructors_VBC.jl")
 
 end # module
