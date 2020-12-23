@@ -20,10 +20,9 @@ function SparseMatrixVBC{U_max, Ws}(A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartiti
         (m, n) = size(A)
         K = length(Π)
         L = length(Φ)
-        Π_spl_ = Π.spl
-        Φ_spl_ = Φ.spl
-        Π_asg = convert(MapPartition, Π)
-        Π_asg_ = Π_asg.asg
+        Π_spl = Π.spl
+        Φ_spl = Φ.spl
+        Π_asg = convert(MapPartition, Π).asg
         hst = zeros(Ti, K)
         A_pos = A.colptr
         A_idx = A.rowval
@@ -34,14 +33,14 @@ function SparseMatrixVBC{U_max, Ws}(A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartiti
         for l = 1:L
             ofs[l + 1] = ofs[l]
             pos[l + 1] = pos[l]
-            j = Φ_spl_[l]
-            j′ = Φ_spl_[l + 1]
+            j = Φ_spl[l]
+            j′ = Φ_spl[l + 1]
             w = j′ - j
             for q = A_pos[j]:A_pos[j′] - 1
                 i = A_idx[q]
-                k = Π_asg_[i]
+                k = Π_asg[i]
                 if hst[k] < l
-                    u = Π_spl_[k + 1] - Π_spl_[k]
+                    u = Π_spl[k + 1] - Π_spl[k]
                     pos[l + 1] += 1
                     ofs[l + 1] += u * w
                 end
@@ -52,7 +51,7 @@ function SparseMatrixVBC{U_max, Ws}(A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartiti
     end
 end
 
-function _construct_SparseMatrixVBC(::Val{U_max}, ::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartition{Ti}, Φ::SplitPartition{Ti}, Π_asg::MapPartition{Ti}, pos::Vector{Ti}, ofs::Vector{Ti}) where {U_max, Ws, Tv, Ti}
+function _construct_SparseMatrixVBC(::Val{U_max}, ::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartition{Ti}, Φ::SplitPartition{Ti}, Π_asg::Vector{Ti}, pos::Vector{Ti}, ofs::Vector{Ti}) where {U_max, Ws, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
@@ -64,9 +63,8 @@ function _construct_SparseMatrixVBC(::Val{U_max}, ::Val{Ws}, A::SparseMatrixCSC{
 
         K = length(Π)
         L = length(Φ)
-        Π_spl_ = Π.spl
-        Φ_spl_ = Φ.spl
-        Π_asg_ = Π_asg.asg
+        Π_spl = Π.spl
+        Φ_spl = Φ.spl
 
         idx = Vector{Ti}(undef, pos[end] - 1)
         val = Vector{Tv}(undef, ofs[end] - 1 + U_max * max(Ws...))
@@ -77,20 +75,20 @@ function _construct_SparseMatrixVBC(::Val{U_max}, ::Val{Ws}, A::SparseMatrixCSC{
         A_q = ones(Int, max(Ws...))
 
         for k = 1:K
-            @assert Π_spl_[k + 1] - Π_spl_[k] <= U_max
+            @assert Π_spl[k + 1] - Π_spl[k] <= U_max
         end
 
         for l = 1:L
-            j = Φ_spl_[l]
-            w = Φ_spl_[l + 1] - j
+            j = Φ_spl[l]
+            w = Φ_spl[l + 1] - j
             @assert w <= max(Ws...)
             if w == 1
                 Q = pos[l]
                 q = ofs[l]
                 A_q_1 = A_pos[j]
                 while A_q_1 < A_pos[j + 1]
-                    k = Π_asg_[A_idx[A_q_1]]
-                    for i = Π_spl_[k] : Π_spl_[k + 1] - 1
+                    k = Π_asg[A_idx[A_q_1]]
+                    for i = Π_spl[k] : Π_spl[k + 1] - 1
                         if A_q_1 < A_pos[j + 1] && A_idx[A_q_1] == i
                             val[q] = A_val[A_q_1]
                             A_q_1 += 1
@@ -107,13 +105,13 @@ function _construct_SparseMatrixVBC(::Val{U_max}, ::Val{Ws}, A::SparseMatrixCSC{
                 for Δj = 1:w
                     A_q[Δj] = A_pos[j + Δj - 1]
                     if A_q[Δj] < A_pos[j + Δj]
-                        k = min(k, Π_asg_[A_idx[A_q[Δj]]])
+                        k = min(k, Π_asg[A_idx[A_q[Δj]]])
                     end
                 end
                 Q = pos[l]
                 q = ofs[l]
                 while k != K + 1
-                    for i = Π_spl_[k] : Π_spl_[k + 1] - 2
+                    for i = Π_spl[k] : Π_spl[k + 1] - 2
                         for Δj = 1:w
                             if A_q[Δj] < A_pos[j + Δj] && A_idx[A_q[Δj]] == i
                                 val[q] = A_val[A_q[Δj]] 
@@ -125,7 +123,7 @@ function _construct_SparseMatrixVBC(::Val{U_max}, ::Val{Ws}, A::SparseMatrixCSC{
                         end
                     end
                     k′ = K + 1
-                    let i = Π_spl_[k + 1] - 1
+                    let i = Π_spl[k + 1] - 1
                         for Δj = 1:w
                             if A_q[Δj] < A_pos[j + Δj]
                                 if A_idx[A_q[Δj]] == i
@@ -135,7 +133,7 @@ function _construct_SparseMatrixVBC(::Val{U_max}, ::Val{Ws}, A::SparseMatrixCSC{
                                     val[q] = zero(Tv)
                                 end
                                 if A_q[Δj] < A_pos[j + Δj]
-                                    k′ = min(k′, Π_asg_[A_idx[A_q[Δj]]])
+                                    k′ = min(k′, Π_asg[A_idx[A_q[Δj]]])
                                 end
                             else
                                 val[q] = zero(Tv)
@@ -149,6 +147,6 @@ function _construct_SparseMatrixVBC(::Val{U_max}, ::Val{Ws}, A::SparseMatrixCSC{
                 end
             end
         end
-        return SparseMatrixVBC{U_max, Ws, Tv, Ti}(m, n, Π, Φ, Π_asg, pos, idx, ofs, val)
+        return SparseMatrixVBC{U_max, Ws, Tv, Ti}(m, n, Π, Φ, pos, idx, ofs, val)
     end
 end

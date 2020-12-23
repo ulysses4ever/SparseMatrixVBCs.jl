@@ -51,12 +51,11 @@ struct SparseMatrixVBC{U_max, Ws, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti
     n::Int
     Π::SplitPartition{Ti}
     Φ::SplitPartition{Ti}
-    Π_asg::MapPartition{Ti}
     pos::Vector{Ti}
     idx::Vector{Ti}
     ofs::Vector{Ti}
     val::Vector{Tv}
-    function SparseMatrixVBC{Us, Ws, Tv, Ti}(m::Integer, n::Integer, Π::SplitPartition{Ti}, Φ::SplitPartition{Ti}, Π_asg::MapPartition{Ti}, pos::Vector{Ti}, idx::Vector{Ti}, ofs::Vector{Ti}, val::Vector{Tv}) where {Us, Ws, Tv, Ti<:Integer}
+    function SparseMatrixVBC{Us, Ws, Tv, Ti}(m::Integer, n::Integer, Π::SplitPartition{Ti}, Φ::SplitPartition{Ti}, pos::Vector{Ti}, idx::Vector{Ti}, ofs::Vector{Ti}, val::Vector{Tv}) where {Us, Ws, Tv, Ti<:Integer}
         @noinline throwsz(str, lbl, x) =
             throw(ArgumentError("number of $str ($lbl) must be ≥ 0, got $x"))
         m < 0 && throwsz("rows", 'm', m)
@@ -64,7 +63,7 @@ struct SparseMatrixVBC{U_max, Ws, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti
         Ws isa Tuple{Vararg{Int}} || throw(ArgumentError("Ws must be a tuple of integers"))
         minimum(Us) > 0 || throw(ArgumentError("Us must be > 0"))
         minimum(Ws) > 0 || throw(ArgumentError("Ws must be > 0"))
-        new(m, n, Π, Φ, Π_asg, pos, idx, ofs, val)
+        new(m, n, Π, Φ, pos, idx, ofs, val)
     end
 end
 
