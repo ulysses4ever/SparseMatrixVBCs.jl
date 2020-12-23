@@ -20,38 +20,56 @@ for mtx in [
     println()
     println(spy(A, maxwidth=50, maxheight=50, title="$mtx"))
     rows = []
-    for method in [nothing,
-        StrictChunker(8),
-        OverlapChunker(0.9, 8),
-        DynamicTotalChunker(model_SparseMatrix1DVBC_blocks(), 8),
-        DynamicTotalChunker(model_SparseMatrix1DVBC_memory(Float64, Int), 8),
-        DynamicTotalChunker(model_SparseMatrix1DVBC_time((1, 4, 8), Float64, Int), 8),
+
+    begin
+        x = rand(size(A, 1))
+        y = rand(size(A, 2))
+        z = A' * x
+        setup_time = 0.0
+        mem = sizeof(A.colptr) + sizeof(A.rowval) + sizeof(A.nzval)
+        run_time = time(@benchmark TrSpMV!($y, $A, $x))
+        
+        @assert y == z
+        push!(rows, ["reference" setup_time mem run_time])
+    end
+    for (key, method) in [
+        ("strict", StrictChunker(8)),
+        ("overlap", OverlapChunker(0.9, 8)),
+        ("min blocks", DynamicTotalChunker(model_SparseMatrix1DVBC_blocks(), 8)),
+        ("min memory", DynamicTotalChunker(model_SparseMatrix1DVBC_memory(Float64, Int), 8)),
+        ("min time", DynamicTotalChunker(model_SparseMatrix1DVBC_time((1, 4, 8), Float64, Int), 8)),
     ]
-        if method == nothing
-            x = rand(size(A, 1))
-            y = rand(size(A, 2))
-            z = A' * x
-            setup_time = 0.0
-            mem = sizeof(A.colptr) + sizeof(A.rowval) + sizeof(A.nzval)
-            run_time = time(@benchmark TrSpMV!($y, $A, $x))
-            
-            @assert y == z
-            push!(rows, [method setup_time mem run_time])
-        else
-            B = SparseMatrix1DVBC{(1,4,8)}(A, method)
-            setup_time = time(@benchmark SparseMatrix1DVBC{(1,4,8)}($A, $method))
+        B = SparseMatrix1DVBC{(1,4,8)}(A, method)
+        setup_time = time(@benchmark SparseMatrix1DVBC{(1,4,8)}($A, $method))
 
-            x = rand(size(A, 1))
-            y = rand(size(A, 2))
-            z = A' * x
+        x = rand(size(A, 1))
+        y = rand(size(A, 2))
+        z = A' * x
 
-            mem = sizeof(B.spl) + sizeof(B.pos) + sizeof(B.idx) + sizeof(B.ofs) + sizeof(B.val)
+        mem = sizeof(B.spl) + sizeof(B.pos) + sizeof(B.idx) + sizeof(B.ofs) + sizeof(B.val)
 
-            run_time = time(@benchmark TrSpMV!($y, $B, $x))
+        run_time = time(@benchmark TrSpMV!($y, $B, $x))
 
-            @assert y == z
-            push!(rows, [method setup_time mem run_time])
-        end
+        @assert y == z
+        push!(rows, [key setup_time mem run_time])
+    end
+    for (key, method) in [
+        ("strict 2D", AlternatingPacker(StrictChunker(8), StrictChunker(8))),
+        ("overlap 2D", AlternatingPacker(OverlapChunker(0.9, 8), OverlapChunker(0.9, 8))),
+    ]
+        B = SparseMatrixVBC{8, (1,4,8)}(A, method)
+        setup_time = time(@benchmark SparseMatrixVBC{8, (1,4,8)}($A, $method))
+
+        x = rand(size(A, 1))
+        y = rand(size(A, 2))
+        z = A' * x
+
+        mem = sizeof(B.Φ) + sizeof(B.Π) + sizeof(B.pos) + sizeof(B.idx) + sizeof(B.ofs) + sizeof(B.val)
+
+        run_time = time(@benchmark TrSpMV!($y, $B, $x))
+
+        @assert y == z
+        push!(rows, [key setup_time mem run_time])
     end
     pretty_table(vcat(rows...), ["method", "setuptime", "memory", "runtime"])
 end
