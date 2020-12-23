@@ -31,28 +31,15 @@ end
     end
 
     function unsafe_thunk(W)
-        if W == 1
-            return quote
-                tmp = zero(eltype(y))
-                q = A_ofs[l]
-                for Q = A_pos[l]:(A_pos[l + 1] - 1)
-                    tmp += A_val[q] * x[A_idx[Q]]
-                    q += 1
-                end
-                y[i] = tmp
-                nothing
+        return quote
+            tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
+            q = A_ofs[l]
+            for Q = A_pos[l]:(A_pos[l + 1] - 1)
+                tmp += vload(Vec{$W, eltype(y)}, A_val, q) * x[A_idx[Q]]
+                q += w
             end
-        else
-            return quote
-                tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
-                q = A_ofs[l]
-                for Q = A_pos[l]:(A_pos[l + 1] - 1)
-                    tmp += vload(Vec{$W, eltype(y)}, A_val, q) * x[A_idx[Q]]
-                    q += w
-                end
-                vstore(tmp, y, i)
-                nothing
-            end
+            vstore(tmp, y, i)
+            nothing
         end
     end
 
@@ -67,30 +54,17 @@ end
     end
 
     function safe_thunk(W)
-        if W == 1
-            return quote
-                tmp = zero(eltype(y))
-                q = A_ofs[l]
-                for Q = A_pos[l]:(A_pos[l + 1] - 1)
-                    tmp += A_val[q] * x[A_idx[Q]]
-                    q += 1
-                end
-                y[i] = tmp
-                nothing
+        return quote
+            tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
+            q = A_ofs[l]
+            for Q = A_pos[l]:(A_pos[l + 1] - 1)
+                tmp += vload(Vec{$W, eltype(y)}, A_val, q) * x[A_idx[Q]]
+                q += w
             end
-        else
-            return quote
-                tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
-                q = A_ofs[l]
-                for Q = A_pos[l]:(A_pos[l + 1] - 1)
-                    tmp += vload(Vec{$W, eltype(y)}, A_val, q) * x[A_idx[Q]]
-                    q += w
-                end
-                for Δi = 1:w
-                    y[i + Δi - 1] = tmp[Δi]
-                end
-                nothing
+            for Δi = 1:w
+                y[i + Δi - 1] = tmp[Δi]
             end
+            nothing
         end
     end
 
@@ -139,43 +113,27 @@ using MacroTools
     end
 
     function stripe_body(safe, W)
-        if W == 1
+        thk = quote
+            tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
+            q = A_ofs[l]
+            for Q = A_pos[l]:(A_pos[l + 1] - 1)
+                k = A_idx[Q]
+                j = Π_spl[k]
+                u = Π_spl[k + 1] - j
+                $(block_nest(W))
+                q += u * w
+            end
+        end
+        if safe
             return quote
-                tmp = zero(eltype(y))
-                q = A_ofs[l]
-                for Q = A_pos[l]:(A_pos[l + 1] - 1)
-                    k = A_idx[Q]
-                    j = Π_spl[k]
-                    u = Π_spl[k + 1] - j
-                    $(block_nest(W))
-                    q += u * w
-                end
-                y[i] = tmp
-                nothing
+                $thk
+                vstore(tmp, y, i)
             end
         else
-            thk = quote
-                tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
-                q = A_ofs[l]
-                for Q = A_pos[l]:(A_pos[l + 1] - 1)
-                    k = A_idx[Q]
-                    j = Π_spl[k]
-                    u = Π_spl[k + 1] - j
-                    $(block_nest(W))
-                    q += u * w
-                end
-            end
-            if safe
-                return quote
-                    $thk
-                    vstore(tmp, y, i)
-                end
-            else
-                return quote
-                    $thk
-                    for Δi = 0:w - 1
-                        y[i + Δi] = tmp[1 + Δi]
-                    end
+            return quote
+                $thk
+                for Δi = 0:w - 1
+                    y[i + Δi] = tmp[1 + Δi]
                 end
             end
         end
@@ -197,21 +155,11 @@ using MacroTools
     end
 
     function block_body(W, U)
-        if W == 1
-            thk = :(tmp += A_val[q] * x[j])
-            for Δj = 1:U-1
-                thk = quote
-                    $thk
-                    tmp += A_val[q + $Δj] * x[j + $Δj]
-                end
-            end
-        else
-            thk = :(tmp += vload(Vec{$W, eltype(y)}, A_val, q) * x[j])
-            for Δj = 1:U-1
-                thk = quote
-                    $thk
-                    tmp += vload(Vec{$W, eltype(y)}, A_val, q + w * $Δj) * x[j + $Δj]
-                end
+        thk = :(tmp += vload(Vec{$W, eltype(y)}, A_val, q) * x[j])
+        for Δj = 1:U-1
+            thk = quote
+                $thk
+                tmp += vload(Vec{$W, eltype(y)}, A_val, q + w * $Δj) * x[j + $Δj]
             end
         end
         return thk

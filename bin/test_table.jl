@@ -30,7 +30,7 @@ for mtx in [
         mem = sizeof(A.colptr) + sizeof(A.rowval) + sizeof(A.nzval)
         run_time = time(@benchmark TrSpMV!($y, $A, $x))
         
-        @assert y == z
+        @assert y ≈ z
         push!(rows, ["reference" setup_time mem run_time])
     end
     for (key, method) in [
@@ -51,7 +51,7 @@ for mtx in [
 
         run_time = time(@benchmark TrSpMV!($y, $B, $x))
 
-        @assert y == z
+        @assert y ≈ z
         push!(rows, [key setup_time mem run_time])
     end
 
@@ -77,7 +77,7 @@ for mtx in [
 
         run_time = time(@benchmark TrSpMV!($y, $B, $x))
 
-        @assert y == z
+        @assert y ≈ z
         push!(rows, [key setup_time mem run_time])
     end
     pretty_table(vcat(rows...), ["method", "setuptime", "memory", "runtime"])
