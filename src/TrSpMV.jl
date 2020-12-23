@@ -1,5 +1,5 @@
 function TrSpMV!(y::Vector, A::SparseMatrixCSC, x::Vector)
-    @inbounds begin
+    @fastmath @inbounds begin
         size(A, 2) == size(y, 1) || throw(DimensionMismatch())
         size(A, 1) == size(x, 1) || throw(DimensionMismatch())
         m = length(y)
@@ -69,7 +69,7 @@ end
     end
 
     thunk = quote
-        @inbounds begin
+        @fastmath @inbounds begin
             size(A, 2) == size(y, 1) || throw(DimensionMismatch())
             size(A, 1) == size(x, 1) || throw(DimensionMismatch())
             m = length(y)
@@ -166,7 +166,7 @@ using MacroTools
     end
 
     thunk = quote
-        @inbounds begin
+        @fastmath @inbounds begin
             size(A, 2) == size(y, 1) || throw(DimensionMismatch())
             size(A, 1) == size(x, 1) || throw(DimensionMismatch())
             m = length(y)
