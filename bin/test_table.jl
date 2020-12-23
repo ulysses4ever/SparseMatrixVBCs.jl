@@ -53,9 +53,13 @@ for mtx in [
         @assert y == z
         push!(rows, [key setup_time mem run_time])
     end
+
+    mdl = BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (sizeof(Int64), x-> x * sizeof(Float64)))
     for (key, method) in [
+        ("1D 2D", AlternatingPacker(EquiChunker(1), DynamicTotalChunker(mdl, 8))),
         ("strict 2D", AlternatingPacker(StrictChunker(8), StrictChunker(8))),
         ("overlap 2D", AlternatingPacker(OverlapChunker(0.9, 8), OverlapChunker(0.9, 8))),
+        ("dynamic 2D", AlternatingPacker(DynamicTotalChunker(AffineFillNetCostModel(0, 0, sizeof(Int64), sizeof(Float64)), 8), DynamicTotalChunker(mdl, 8))),
     ]
         B = SparseMatrixVBC{8, (1,4,8)}(A, method)
         setup_time = time(@benchmark SparseMatrixVBC{8, (1,4,8)}($A, $method))
