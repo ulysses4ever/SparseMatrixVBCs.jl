@@ -9,6 +9,7 @@ using PrettyTables
 using ChainPartitioners
 
 for mtx in [
+            "HB/bcsstk02",
             "Boeing/ct20stif",
             "DIMACS10/chesapeake",
             #"Schmid/thermal1",
@@ -55,11 +56,15 @@ for mtx in [
     end
 
     mdl = BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (sizeof(Int64), x-> x * sizeof(Float64)))
+    block_mdl = BlockComponentCostModel{Int64}((8, 8), 0, 0, (1,), (1,))
     for (key, method) in [
-        ("1D 2D", AlternatingPacker(EquiChunker(1), DynamicTotalChunker(mdl, 8))),
+        ("1D 2D", AlternatingPacker(DynamicTotalChunker(mdl, 8), EquiChunker(1))),
         ("strict 2D", AlternatingPacker(StrictChunker(8), StrictChunker(8))),
-        ("overlap 2D", AlternatingPacker(OverlapChunker(0.9, 8), OverlapChunker(0.9, 8))),
+        ("overlap 2D 0.9", AlternatingPacker(OverlapChunker(0.9, 8), OverlapChunker(0.9, 8))),
+        ("overlap 2D 0.8", AlternatingPacker(OverlapChunker(0.8, 8), OverlapChunker(0.8, 8))),
+        ("overlap 2D 0.7", AlternatingPacker(OverlapChunker(0.7, 8), OverlapChunker(0.7, 8))),
         ("dynamic 2D", AlternatingPacker(DynamicTotalChunker(AffineFillNetCostModel(0, 0, sizeof(Int64), sizeof(Float64)), 8), DynamicTotalChunker(mdl, 8))),
+        ("blocks 2D", AlternatingPacker(DynamicTotalChunker(AffineFillNetCostModel(0, 0, 0, 1), 8), DynamicTotalChunker(block_mdl, 8))),
     ]
         B = SparseMatrixVBC{8, (1,4,8)}(A, method)
         setup_time = time(@benchmark SparseMatrixVBC{8, (1,4,8)}($A, $method))
