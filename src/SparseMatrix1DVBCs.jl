@@ -23,19 +23,19 @@ One-Dimensional Variable Block Column format.
 struct SparseMatrix1DVBC{Ws, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
     m::Int
     n::Int
-    spl::Vector{Ti}
+    Φ::SplitPartition{Ti}
     pos::Vector{Ti}
     idx::Vector{Ti}
     ofs::Vector{Ti}
     val::Vector{Tv}
-    function SparseMatrix1DVBC{Ws, Tv, Ti}(m::Integer, n::Integer, spl::Vector{Ti}, pos::Vector{Ti}, idx::Vector{Ti}, ofs::Vector{Ti}, val::Vector{Tv}) where {Ws, Tv, Ti<:Integer}
+    function SparseMatrix1DVBC{Ws, Tv, Ti}(m::Integer, n::Integer, Φ::SplitPartition{Ti}, pos::Vector{Ti}, idx::Vector{Ti}, ofs::Vector{Ti}, val::Vector{Tv}) where {Ws, Tv, Ti<:Integer}
         @noinline throwsz(str, lbl, K) =
             throw(ArgumentError("number of $str ($lbl) must be ≥ 0, got $K"))
         m < 0 && throwsz("rows", 'm', m)
         n < 0 && throwsz("columns", 'n', n)
         Ws isa Tuple{Vararg{Int}} || throw(ArgumentError("Ws must be a tuple of integers"))
         minimum(Ws) > 0 || throw(ArgumentError("Ws must be > 0"))
-        new(m, n, spl, pos, idx, ofs, val)
+        new(m, n, Φ, pos, idx, ofs, val)
     end
 end
 

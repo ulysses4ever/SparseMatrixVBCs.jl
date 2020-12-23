@@ -6,14 +6,14 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method=DynamicTotalCh
     else
         L = length(Φ)
         Φ = convert(SplitPartition, Φ)
-        spl = Φ.spl
+        Φ_spl = Φ.spl
         pos = undefs(Ti, L + 1)
         ofs = undefs(Ti, L + 1)
         pos[1] = 1
         ofs[1] = 1
         for l = 1:L
             pos[l + 1] = pos[l] + x_net[][l]
-            ofs[l + 1] = ofs[l] + x_net[][l] * (spl[l + 1] - spl[l])
+            ofs[l + 1] = ofs[l] + x_net[][l] * (Φ_spl[l + 1] - Φ_spl[l])
         end
         return _construct_SparseMatrix1DVBC(Val(Ws), A, Φ, pos, ofs)
     end
@@ -56,7 +56,7 @@ function _construct_SparseMatrix1DVBC(::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Φ:
         A_val = A.nzval
 
         L = length(Φ)
-        spl = Φ.spl
+        Φ_spl = Φ.spl
 
         idx = Vector{Ti}(undef, pos[end] - 1)
         val = Vector{Tv}(undef, ofs[end] - 1 + max(Ws...))
@@ -67,8 +67,8 @@ function _construct_SparseMatrix1DVBC(::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Φ:
         A_q = ones(Int, max(Ws...))
 
         for l = 1:L
-            j = spl[l]
-            w = spl[l + 1] - j
+            j = Φ_spl[l]
+            w = Φ_spl[l + 1] - j
             @assert w <= max(Ws...)
             if w == 1
                 Q = pos[l]
@@ -113,7 +113,7 @@ function _construct_SparseMatrix1DVBC(::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Φ:
                 end
             end
         end
-        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, spl, pos, idx, ofs, val)
+        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, Φ, pos, idx, ofs, val)
     end
 end
 
@@ -130,14 +130,14 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method::StrictChunker
         A_val = A.nzval
 
         L = length(Φ)
-        spl = Φ.spl
+        Φ_spl = Φ.spl
         pos = undefs(Ti, L + 1)
         ofs = undefs(Ti, L + 1)
         pos[1] = 1
         ofs[1] = 1
         for l = 1:L
-            j = spl[l]
-            j′ = spl[l + 1]
+            j = Φ_spl[l]
+            j′ = Φ_spl[l + 1]
             pos[l + 1] = pos[l] + A_pos[min(j + 1, j′)] - A_pos[j]
             ofs[l + 1] = A_pos[j′]
         end
@@ -150,18 +150,18 @@ function SparseMatrix1DVBC{Ws}(A::SparseMatrixCSC{Tv, Ti}, method::StrictChunker
         A_q = ones(Int, max(Ws...))
 
         for l = 1:L
-            j = spl[l]
-            w = spl[l + 1] - j
+            j = Φ_spl[l]
+            w = Φ_spl[l + 1] - j
             @assert w <= max(Ws...)
             for Q = 0 : A_pos[j + 1] - A_pos[j] - 1
                 idx[pos[l] + Q] = A_idx[A_pos[j] + Q]
             end
-            for j′ = spl[l] : (spl[l + 1] - 1)
+            for j′ = Φ_spl[l] : (Φ_spl[l + 1] - 1)
                 for Q = 0 : A_pos[j + 1] - A_pos[j] - 1
                     val[ofs[l] + Q * w + j′ - j] = A_val[A_pos[j′] + Q]
                 end
             end
         end
-        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, spl, pos, idx, ofs, val)
+        return SparseMatrix1DVBC{Ws, Tv, Ti}(m, n, Φ, pos, idx, ofs, val)
     end
 end

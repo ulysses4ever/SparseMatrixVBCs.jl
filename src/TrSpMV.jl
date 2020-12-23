@@ -75,20 +75,20 @@ end
             m = length(y)
             n = length(x)
             
-            A_spl = A.spl
+            Φ_spl = A.Φ.spl
             A_pos = A.pos
             A_idx = A.idx
             A_ofs = A.ofs
             A_val = A.val
-            L = length(A_spl) - 1
+            L = length(A.Φ)
             for l = 1:(L - $(max(Ws...)) - 1)
-                i = A_spl[l]
-                w = A_spl[l + 1] - i
+                i = Φ_spl[l]
+                w = Φ_spl[l + 1] - i
                 $(unsafe_thunk(Ws...))
             end
             for l = max(1, (L - $(max(Ws...)))):L
-                i = A_spl[l]
-                w = A_spl[l + 1] - i
+                i = Φ_spl[l]
+                w = Φ_spl[l + 1] - i
                 $(safe_thunk(Ws...))
             end
             return y
