@@ -58,7 +58,7 @@ for mtx in [
     mdl = BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (sizeof(Int64), x-> x * sizeof(Float64)))
     block_mdl = BlockComponentCostModel{Int64}((8, 8), 0, 0, (1,), (1,))
     for (key, method) in [
-        ("1D 2D", AlternatingPacker(DynamicTotalChunker(mdl, 8), EquiChunker(1))),
+        ("1D 2D", AlternatingPacker(DynamicTotalChunker(model_SparseMatrix1DVBC_time((1, 4, 8), Float64, Int), 8), EquiChunker(1))),
         ("strict 2D", AlternatingPacker(StrictChunker(8), StrictChunker(8))),
         ("overlap 2D 0.9", AlternatingPacker(OverlapChunker(0.9, 8), OverlapChunker(0.9, 8))),
         ("overlap 2D 0.8", AlternatingPacker(OverlapChunker(0.8, 8), OverlapChunker(0.8, 8))),
