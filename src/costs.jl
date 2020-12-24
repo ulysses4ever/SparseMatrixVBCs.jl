@@ -25,8 +25,8 @@ struct SparseMatrix1DVBCTimeModel{W, Tv, Ti} <: AbstractNetCostModel
                     n = w * K
                     spl = collect(Ti(1):Ti(w):Ti(n + 1))
                     A = SparseMatrix1DVBC{W}(sparse(ones(Tv, m, n)), SplitPartition{Ti}(length(spl) - 1, spl))
-                    x = ones(Tv, m)
-                    y = ones(Tv, n)
+                    x = ones(m) #TODO add eltype and Δw info to autotuned params
+                    y = ones(n) #TODO add eltype and Δw info to autotuned params
                     mul!(y, A', x)
                     t = (@belapsed mul!($y, $A', $x) evals=1_000) / K
                     push!(ts, t)

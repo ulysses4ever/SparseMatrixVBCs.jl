@@ -4,11 +4,13 @@ using SparseArrays
 using ChainPartitioners
 using SIMD
 using Hwloc
-using CpuId
 using BenchmarkTools
 using BSON
 using Statistics
 using LinearAlgebra
+
+using CpuId
+const DEFAULT_SIMD_SIZE = CpuId.simdbytes()
 
 export model_SparseMatrix1DVBC_blocks
 export model_SparseMatrix1DVBC_memory

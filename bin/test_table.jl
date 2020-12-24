@@ -48,6 +48,7 @@ for mtx in [
         y = rand(size(A, 2))
         z = A' * x
 
+
         mem = sizeof(B.Φ) + sizeof(B.pos) + sizeof(B.idx) + sizeof(B.ofs) + sizeof(B.val)
 
         run_time = time(@benchmark mul!($y, $B', $x, true, false))
