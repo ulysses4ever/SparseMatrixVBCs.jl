@@ -19,8 +19,8 @@ AdjOrTransSparseMatrixVBC{U_max, Ws, Tv, Ti} = Union{SparseMatrixVBC{U_max, Ws, 
             q = A_ofs[l]
             for Q = A_pos[l]:(A_pos[l + 1] - 1)
                 k = A_idx[Q]
-                j = Π_spl[k]
-                u = Π_spl[k + 1] - j
+                i = Π_spl[k]
+                u = Π_spl[k + 1] - i
                 $(block_nest(W))
                 q += u * w
             end
@@ -28,13 +28,13 @@ AdjOrTransSparseMatrixVBC{U_max, Ws, Tv, Ti} = Union{SparseMatrixVBC{U_max, Ws, 
         if safe
             return quote
                 $thk
-                vstore(tmp, y, i)
+                vstore(tmp, y, j)
             end
         else
             return quote
                 $thk
-                for Δi = 0:w - 1
-                    y[i + Δi] = tmp[1 + Δi]
+                for Δj = 0:w - 1
+                    y[j + Δj] = tmp[1 + Δj]
                 end
             end
         end
@@ -57,10 +57,10 @@ AdjOrTransSparseMatrixVBC{U_max, Ws, Tv, Ti} = Union{SparseMatrixVBC{U_max, Ws, 
 
     function block_body(W, U)
         thk = :()
-        for Δj = 0:U-1
+        for Δi = 0:U-1
             thk = quote
                 $thk
-                tmp += convert(Vec{$W, eltype(y)}, vload(Vec{$W, Tv}, A_val, q + w * $Δj)) * convert(eltype(y), x[j + $Δj])
+                tmp += convert(Vec{$W, eltype(y)}, vload(Vec{$W, Tv}, A_val, q + w * $Δi)) * convert(eltype(y), x[i + $Δi])
             end
         end
         return thk
@@ -88,13 +88,13 @@ AdjOrTransSparseMatrixVBC{U_max, Ws, Tv, Ti} = Union{SparseMatrixVBC{U_max, Ws, 
             L_safe = L
             while L_safe > 1 && n + 1 - Φ_spl[L_safe] < $(max(Ws...)) L_safe -= 1 end
             for l = 1:(L_safe - 1)
-                i = Φ_spl[l]
-                w = Φ_spl[l + 1] - i
+                j = Φ_spl[l]
+                w = Φ_spl[l + 1] - j
                 $(stripe_nest(true))
             end
             for l = L_safe:L
-                i = Φ_spl[l]
-                w = Φ_spl[l + 1] - i
+                j = Φ_spl[l]
+                w = Φ_spl[l + 1] - j
                 $(stripe_nest(false))
             end
             return y
