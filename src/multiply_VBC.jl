@@ -64,7 +64,7 @@ end
             A_val = A.val
             L = length(A.Φ)
             L_safe = L
-            while L_safe >= 1 && n + 1 - Φ_spl[L_safe] < Δw L_safe -= 1 end
+            while L_safe >= 1 && n + 1 - Φ_spl[L_safe] < $(Δw * cld(W, Δw)) L_safe -= 1 end
             for l = 1:L_safe
                 j = Φ_spl[l]
                 w = Φ_spl[l + 1] - j
@@ -153,7 +153,7 @@ end
             A_val = A.val
             L = length(A.Φ)
             L_safe = L
-            while L_safe >= 1 && n + 1 - Φ_spl[L_safe] < Δw L_safe -= 1 end
+            while L_safe >= 1 && n + 1 - Φ_spl[L_safe] < $(Δw * cld(W, Δw)) L_safe -= 1 end
             for l = 1:L_safe
                 j = Φ_spl[l]
                 w = Φ_spl[l + 1] - j
