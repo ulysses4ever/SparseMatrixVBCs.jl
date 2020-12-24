@@ -1,4 +1,6 @@
-@generated function TrSpMV!(y::Vector, A::SparseMatrixVBC{U_max, Ws, Tv, Ti}, x::Vector) where {U_max, Ws, Tv, Ti}
+AdjOrTransSparseMatrixVBC{U_max, Ws, Tv, Ti} = Union{SparseMatrixVBC{U_max, Ws, Tv, Ti}, Adjoint{<:Any,<:SparseMatrixVBC{U_max, Ws, Tv, Ti}}, Transpose{<:Any, <:SparseMatrixVBC{U_max, Ws, Tv, Ti}}}
+
+@generated function LinearAlgebra.mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrixVBC{U_max, Ws, Tv, Ti}}, Transpose{<:Any, <:SparseMatrixVBC{U_max, Ws, Tv, Ti}}}, x::StridedVector, α::Number, β::Number) where {U_max, Ws, Tv<:SIMD.VecTypes, Ti}
     stripe_nest(safe) = stripe_nest(safe, Ws...)
     stripe_nest(safe, W) = stripe_body(safe, W)
     function stripe_nest(safe, W, tail...)
@@ -66,10 +68,15 @@
 
     thunk = quote
         @fastmath @inbounds begin
+            A = adjA.parent
             size(A, 2) == size(y, 1) || throw(DimensionMismatch())
             size(A, 1) == size(x, 1) || throw(DimensionMismatch())
             m = length(y)
             n = length(x)
+
+            if β != 1
+                β != 0 ? rmul!(y, β) : fill!(y, zero(eltype(y)))
+            end
             
             Π_spl = A.Π.spl
             Φ_spl = A.Φ.spl
@@ -95,3 +102,8 @@
     end
     return thunk
 end
+
+Base.:*(adjA::AdjOrTransSparseMatrixVBC, x::StridedVector{Tx}) where {Tx} =
+    (T = Base.promote_op(LinearAlgebra.matprod, eltype(adjA), Tx); mul!(similar(x, T, size(adjA, 1)), adjA, x, true, false))
+Base.:*(adjA::AdjOrTransSparseMatrixVBC, B::AdjOrTransStridedOrTriangularMatrix) =
+    (T = Base.promote_op(LinearAlgebra.matprod, eltype(adjA), eltype(B)); mul!(similar(B, T, (size(adjA, 1), size(B, 2))), adjA, B, true, false))

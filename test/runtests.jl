@@ -51,7 +51,7 @@ include("matrices.jl")
                 x[j] = false
             end
         end
-        #=
+
         for method in [
             AlternatingPacker(StrictChunker(4), StrictChunker(4)),
             AlternatingPacker(OverlapChunker(0.9, 4), OverlapChunker(0.9, 4)),
@@ -65,12 +65,11 @@ include("matrices.jl")
                 x[i] = true
                 fill!(y_ref, false)
                 fill!(y_test, false)
-                TrSpMV!(y_ref, A, x) 
-                TrSpMV!(y_test, B, x) 
+                LinearAlgebra.mul!(y_ref, A', x, true, false) 
+                LinearAlgebra.mul!(y_test, B', x, true, false) 
                 @test y_ref == y_test
                 x[i] = false
             end
         end
-        =#
     end
 end
