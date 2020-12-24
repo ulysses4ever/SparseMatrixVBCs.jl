@@ -20,52 +20,41 @@ function TrSpMV!(y::Vector, A::SparseMatrixCSC, x::Vector)
 end
 
 @generated function TrSpMV!(y::Vector, A::SparseMatrix1DVBC{Ws, Tv, Ti}, x::Vector) where {Ws, Tv, Ti}
-    function unsafe_thunk(W, tail...)
+    stripe_nest(safe, W) = stripe_body(safe, W)
+    function stripe_nest(safe, W, tail...)
         return quote
             if w <= $W
-                $(unsafe_thunk(W))
+                $(stripe_body(safe, W))
             else
-                $(unsafe_thunk(tail...))
+                $(stripe_nest(safe, tail...))
             end
         end
     end
 
-    function unsafe_thunk(W)
-        return quote
+    function stripe_body(safe, W)
+        thk = quote
             tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
             q = A_ofs[l]
             for Q = A_pos[l]:(A_pos[l + 1] - 1)
                 tmp += vload(Vec{$W, eltype(y)}, A_val, q) * x[A_idx[Q]]
                 q += w
             end
-            vstore(tmp, y, i)
-            nothing
         end
-    end
+        if safe
+            thk = quote
+                $thk
+                vstore(tmp, y, i)
+            end
+        else
+            thk = quote
+                $thk
+                for Δi = 1:w
+                    y[i + Δi - 1] = tmp[Δi]
+                end
+            end
+        end
 
-    function safe_thunk(W, tail...)
-        return quote
-            if w <= $W
-                $(safe_thunk(W))
-            else
-                $(safe_thunk(tail...))
-            end
-        end
-    end
-
-    function safe_thunk(W)
-        return quote
-            tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
-            q = A_ofs[l]
-            for Q = A_pos[l]:(A_pos[l + 1] - 1)
-                tmp += vload(Vec{$W, eltype(y)}, A_val, q) * x[A_idx[Q]]
-                q += w
-            end
-            for Δi = 1:w
-                y[i + Δi - 1] = tmp[Δi]
-            end
-            nothing
-        end
+        return thk
     end
 
     thunk = quote
@@ -84,12 +73,12 @@ end
             for l = 1:(L - $(max(Ws...)) - 1)
                 i = Φ_spl[l]
                 w = Φ_spl[l + 1] - i
-                $(unsafe_thunk(Ws...))
+                $(stripe_nest(true, Ws...))
             end
             for l = max(1, (L - $(max(Ws...)))):L
                 i = Φ_spl[l]
                 w = Φ_spl[l + 1] - i
-                $(safe_thunk(Ws...))
+                $(stripe_nest(false, Ws...))
             end
             return y
         end
