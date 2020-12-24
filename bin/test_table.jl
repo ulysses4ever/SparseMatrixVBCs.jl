@@ -7,6 +7,7 @@ using Cthulhu
 using UnicodePlots
 using PrettyTables
 using ChainPartitioners
+using InteractiveUtils
 
 for mtx in [
             "HB/bcsstk02",
@@ -47,9 +48,9 @@ for mtx in [
         y = rand(size(A, 2))
         z = A' * x
 
-        mem = sizeof(B.spl) + sizeof(B.pos) + sizeof(B.idx) + sizeof(B.ofs) + sizeof(B.val)
+        mem = sizeof(B.Φ) + sizeof(B.pos) + sizeof(B.idx) + sizeof(B.ofs) + sizeof(B.val)
 
-        run_time = time(@benchmark TrSpMV!($y, $B, $x))
+        run_time = time(@benchmark mul!($y, $B', $x, true, false))
 
         @assert y ≈ z
         push!(rows, [key setup_time mem run_time])
@@ -75,7 +76,7 @@ for mtx in [
 
         mem = sizeof(B.Φ) + sizeof(B.Π) + sizeof(B.pos) + sizeof(B.idx) + sizeof(B.ofs) + sizeof(B.val)
 
-        run_time = time(@benchmark TrSpMV!($y, $B, $x))
+        run_time = time(@benchmark mul!($y, $B', $x, true, false))
 
         @assert y ≈ z
         push!(rows, [key setup_time mem run_time])

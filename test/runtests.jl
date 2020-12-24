@@ -24,7 +24,7 @@ include("matrices.jl")
             DynamicTotalChunker(model_SparseMatrix1DVBC_time((1, 2, 4), Float64, Int), 4),
         ]
             (m, n) = size(A)
-            B = SparseMatrix1DVBC{(4,)}(A, method)
+            B = SparseMatrix1DVBC{(1, 2, 4)}(A, method)
 
             x = zeros(eltype(A), n)
             y_ref = A * x
