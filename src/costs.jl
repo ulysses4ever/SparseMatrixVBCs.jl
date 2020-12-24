@@ -28,7 +28,7 @@ struct SparseMatrix1DVBCTimeModel{Ws, Tv, Ti} <: AbstractNetCostModel
                     x = ones(Tv, m)
                     y = ones(Tv, n)
                     TrSpMV!(y, A, x)
-                    t = (@belapsed TrSpMV!($y, $A, $x) evals=1_000) / K
+                    t = (@belapsed mul!($y, $A', $x) evals=1_000) / K
                     push!(ts, t)
                     @info "w: $w m: $m K: $K t: $t"
                 end

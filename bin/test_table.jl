@@ -38,8 +38,8 @@ for mtx in [
         ("strict", StrictChunker(8)),
         ("overlap", OverlapChunker(0.9, 8)),
         ("min blocks", DynamicTotalChunker(model_SparseMatrix1DVBC_blocks(), 8)),
-        ("min memory", DynamicTotalChunker(model_SparseMatrix1DVBC_memory(Float64, Int), 8)),
-        ("min time", DynamicTotalChunker(model_SparseMatrix1DVBC_time((1, 4, 8), Float64, Int), 8)),
+        ("min memory", DynamicTotalChunker(model_SparseMatrix1DVBC_memory(eltype(A), Int), 8)),
+        ("min time", DynamicTotalChunker(model_SparseMatrix1DVBC_time((1, 4, 8), eltype(A), Int), 8)),
     ]
         B = SparseMatrix1DVBC{(1,4,8)}(A, method)
         setup_time = time(@benchmark SparseMatrix1DVBC{(1,4,8)}($A, $method))
@@ -56,15 +56,15 @@ for mtx in [
         push!(rows, [key setup_time mem run_time])
     end
 
-    mdl = BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (sizeof(Int64), x-> x * sizeof(Float64)))
+    mdl = BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (sizeof(Int64), x-> x * sizeof(eltype(A))))
     block_mdl = BlockComponentCostModel{Int64}((8, 8), 0, 0, (1,), (1,))
     for (key, method) in [
-        ("1D 2D", AlternatingPacker(DynamicTotalChunker(model_SparseMatrix1DVBC_time((1, 4, 8), Float64, Int), 8), EquiChunker(1))),
+        ("1D 2D", AlternatingPacker(DynamicTotalChunker(model_SparseMatrix1DVBC_time((1, 4, 8), eltype(A), Int), 8), EquiChunker(1))),
         ("strict 2D", AlternatingPacker(StrictChunker(8), StrictChunker(8))),
         ("overlap 2D 0.9", AlternatingPacker(OverlapChunker(0.9, 8), OverlapChunker(0.9, 8))),
         ("overlap 2D 0.8", AlternatingPacker(OverlapChunker(0.8, 8), OverlapChunker(0.8, 8))),
         ("overlap 2D 0.7", AlternatingPacker(OverlapChunker(0.7, 8), OverlapChunker(0.7, 8))),
-        ("dynamic 2D", AlternatingPacker(DynamicTotalChunker(AffineFillNetCostModel(0, 0, sizeof(Int64), sizeof(Float64)), 8), DynamicTotalChunker(mdl, 8))),
+        ("dynamic 2D", AlternatingPacker(DynamicTotalChunker(AffineFillNetCostModel(0, 0, sizeof(Int64), sizeof(eltype(A))), 8), DynamicTotalChunker(mdl, 8))),
         ("blocks 2D", AlternatingPacker(DynamicTotalChunker(AffineFillNetCostModel(0, 0, 0, 1), 8), DynamicTotalChunker(block_mdl, 8))),
     ]
         B = SparseMatrixVBC{8, (1,4,8)}(A, method)
