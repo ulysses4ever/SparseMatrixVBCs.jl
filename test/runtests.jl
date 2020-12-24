@@ -59,6 +59,20 @@ include("matrices.jl")
         ]
             (m, n) = size(A)
             B = SparseMatrixVBC{4, (1, 2, 4)}(A, method)
+
+            x = zeros(eltype(A), n)
+            y_ref = A * x
+            y_test = A * x
+            for j = 1:n
+                x[j] = true
+                fill!(y_ref, false)
+                fill!(y_test, false)
+                LinearAlgebra.mul!(y_ref, A, x, true, false) 
+                LinearAlgebra.mul!(y_test, B, x, true, false) 
+                @test y_ref == y_test
+                x[j] = false
+            end
+
             x = zeros(eltype(A), m)
             y_ref = A' * x
             y_test = A' * x

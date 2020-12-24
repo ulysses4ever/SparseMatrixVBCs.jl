@@ -1,5 +1,103 @@
 AdjOrTransSparseMatrixVBC{U_max, Ws, Tv, Ti} = Union{SparseMatrixVBC{U_max, Ws, Tv, Ti}, Adjoint{<:Any,<:SparseMatrixVBC{U_max, Ws, Tv, Ti}}, Transpose{<:Any, <:SparseMatrixVBC{U_max, Ws, Tv, Ti}}}
 
+@generated function LinearAlgebra.mul!(y::StridedVector, A::SparseMatrixVBC{U_max, Ws, Tv, Ti}, x::StridedVector, α::Number, β::Number) where {U_max, Ws, Tv<:SIMD.VecTypes, Ti}
+    stripe_nest(safe) = stripe_nest(safe, Ws...)
+    stripe_nest(safe, W) = stripe_body(safe, W)
+    function stripe_nest(safe, W, tail...)
+        return quote
+            if w <= $W
+                $(stripe_body(safe, W))
+            else
+                $(stripe_nest(safe, tail...))
+            end
+        end
+    end
+
+    function stripe_body(safe, W)
+        if false && safe #TODO how do I zero out the other entries efficiently?
+            thk = quote
+                tmp = convert(Vec{$W, eltype(y)}, vload(Vec{$W, eltype(x)}, x, j))
+            end
+        else
+            thk = quote
+                tmp = convert(Vec{$W, eltype(y)}, Vec{$W, eltype(x)}(($(map(Δj -> :($Δj < w ? x[j + $Δj] : zero(eltype(x))), 0:W-1)...),)))
+            end
+        end
+        thk = quote
+            $thk
+            q = A_ofs[l]
+            for Q = A_pos[l]:(A_pos[l + 1] - 1)
+                k = A_idx[Q]
+                i = Π_spl[k]
+                u = Π_spl[k + 1] - i
+                $(block_nest(W))
+                q += u * w
+            end
+        end
+        return thk
+    end
+
+    block_nest(W) = block_nest(W, U_max)
+    function block_nest(W, U)
+        if U == 1
+            return block_body(W, U)
+        else
+            return quote
+                if u == $U
+                    $(block_body(W, U))
+                else
+                    $(block_nest(W, U - 1))
+                end
+            end
+        end
+    end
+
+    function block_body(W, U)
+        thk = :()
+        for Δi = 0:U-1
+            thk = quote
+                $thk
+                y[i + $Δi] += sum(convert(Vec{$W, eltype(y)}, vload(Vec{$W, Tv}, A_val, q + w * $Δi)) * tmp)
+            end
+        end
+        return thk
+    end
+
+    thunk = quote
+        @inbounds begin
+            size(A, 1) == size(y, 1) || throw(DimensionMismatch())
+            size(A, 2) == size(x, 1) || throw(DimensionMismatch())
+            (m, n) = size(A)
+
+            if β != 1
+                β != 0 ? rmul!(y, β) : fill!(y, zero(eltype(y)))
+            end
+            
+            Π_spl = A.Π.spl
+            Φ_spl = A.Φ.spl
+            A_pos = A.pos
+            A_idx = A.idx
+            A_ofs = A.ofs
+            A_val = A.val
+            L = length(A.Φ)
+            L_safe = L
+            while L_safe > 1 && n + 1 - Φ_spl[L_safe] < $(max(Ws...)) L_safe -= 1 end
+            for l = 1:(L_safe - 1)
+                j = Φ_spl[l]
+                w = Φ_spl[l + 1] - j
+                $(stripe_nest(true))
+            end
+            for l = L_safe:L
+                j = Φ_spl[l]
+                w = Φ_spl[l + 1] - j
+                $(stripe_nest(false))
+            end
+            return y
+        end
+    end
+    return thunk
+end
+
 @generated function LinearAlgebra.mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrixVBC{U_max, Ws, Tv, Ti}}, Transpose{<:Any, <:SparseMatrixVBC{U_max, Ws, Tv, Ti}}}, x::StridedVector, α::Number, β::Number) where {U_max, Ws, Tv<:SIMD.VecTypes, Ti}
     stripe_nest(safe) = stripe_nest(safe, Ws...)
     stripe_nest(safe, W) = stripe_body(safe, W)
@@ -71,8 +169,7 @@ AdjOrTransSparseMatrixVBC{U_max, Ws, Tv, Ti} = Union{SparseMatrixVBC{U_max, Ws, 
             A = adjA.parent
             size(A, 2) == size(y, 1) || throw(DimensionMismatch())
             size(A, 1) == size(x, 1) || throw(DimensionMismatch())
-            m = length(y)
-            n = length(x)
+            (m, n) = size(A)
 
             if β != 1
                 β != 0 ? rmul!(y, β) : fill!(y, zero(eltype(y)))
