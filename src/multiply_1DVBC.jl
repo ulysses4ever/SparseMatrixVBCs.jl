@@ -38,7 +38,7 @@ AdjOrTransSparseMatrix1DVBC{Ws, Tv, Ti} = Union{SparseMatrix1DVBC{Ws, Tv, Ti}, A
     end
 
     thunk = quote
-        @fastmath @inbounds begin
+        @inbounds begin
             size(A, 1) == size(y, 1) || throw(DimensionMismatch())
             size(A, 2) == size(x, 1) || throw(DimensionMismatch())
             (m, n) = size(A)
@@ -111,7 +111,7 @@ end
     end
 
     thunk = quote
-        @fastmath @inbounds begin
+        @inbounds begin
             A = adjA.parent
             size(A, 2) == size(y, 1) || throw(DimensionMismatch())
             size(A, 1) == size(x, 1) || throw(DimensionMismatch())

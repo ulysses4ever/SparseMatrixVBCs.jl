@@ -56,18 +56,18 @@ AdjOrTransSparseMatrixVBC{U_max, Ws, Tv, Ti} = Union{SparseMatrixVBC{U_max, Ws, 
     end
 
     function block_body(W, U)
-        thk = :(tmp += vload(Vec{$W, eltype(y)}, A_val, q) * x[j])
-        for Δj = 1:U-1
+        thk = :()
+        for Δj = 0:U-1
             thk = quote
                 $thk
-                tmp += vload(Vec{$W, eltype(y)}, A_val, q + w * $Δj) * x[j + $Δj]
+                tmp += convert(Vec{$W, eltype(y)}, vload(Vec{$W, Tv}, A_val, q + w * $Δj)) * convert(eltype(y), x[j + $Δj])
             end
         end
         return thk
     end
 
     thunk = quote
-        @fastmath @inbounds begin
+        @inbounds begin
             A = adjA.parent
             size(A, 2) == size(y, 1) || throw(DimensionMismatch())
             size(A, 1) == size(x, 1) || throw(DimensionMismatch())
