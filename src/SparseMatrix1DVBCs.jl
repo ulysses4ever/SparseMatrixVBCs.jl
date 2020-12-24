@@ -7,6 +7,7 @@ using Hwloc
 using BenchmarkTools
 using BSON
 using Statistics
+using LinearAlgebra
 
 export model_SparseMatrix1DVBC_blocks
 export model_SparseMatrix1DVBC_memory
@@ -76,5 +77,6 @@ include("TrSpMV.jl")
 include("costs.jl")
 include("constructors_1DVBC.jl")
 include("constructors_VBC.jl")
+include("hacks.jl")
 
 end # module

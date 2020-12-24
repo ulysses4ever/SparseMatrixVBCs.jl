@@ -1,0 +1,1 @@
+Base.convert(::Type{Vec{N, T1}}, v::Vec{N, Bool}) where {N, T1<:SIMD.FloatingTypes} = convert(Vec{N, T1}, reinterpret(Vec{N, UInt8}, v))
