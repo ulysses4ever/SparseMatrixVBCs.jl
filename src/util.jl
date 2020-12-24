@@ -24,3 +24,27 @@ end
 @inline undefs(T::Type, dims::Vararg{Any, N}) where {N} = Array{T, N}(undef, dims...)
 
 zero!(arr) = fill!(arr, zero(eltype(arr)))
+
+le_nest(f, x, ns) = _le_nest(f, x, ns...)
+_le_nest(f, x, n) = f(n)
+function _le_nest(f, x, n, ns...)
+    return quote
+        if $x <= $n
+            $(f(n))
+        else
+            $(_le_nest(f, x, ns...))
+        end
+    end
+end
+
+eq_nest(f, x, ns) = _eq_nest(f, x, ns...)
+_eq_nest(f, x, n) = f(n)
+function _eq_nest(f, x, n, ns...)
+    return quote
+        if $x == $n
+            $(f(n))
+        else
+            $(_eq_nest(f, x, ns...))
+        end
+    end
+end

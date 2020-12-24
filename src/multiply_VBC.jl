@@ -1,26 +1,24 @@
-AdjOrTransSparseMatrixVBC{U_max, Ws, Tv, Ti} = Union{SparseMatrixVBC{U_max, Ws, Tv, Ti}, Adjoint{<:Any,<:SparseMatrixVBC{U_max, Ws, Tv, Ti}}, Transpose{<:Any, <:SparseMatrixVBC{U_max, Ws, Tv, Ti}}}
+AdjOrTransSparseMatrixVBC{U, W, Tv, Ti} = Union{SparseMatrixVBC{U, W, Tv, Ti}, Adjoint{<:Any,<:SparseMatrixVBC{U, W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrixVBC{U, W, Tv, Ti}}}
 
-@generated function LinearAlgebra.mul!(y::StridedVector, A::SparseMatrixVBC{U_max, Ws, Tv, Ti}, x::StridedVector, α::Number, β::Number) where {U_max, Ws, Tv<:SIMD.VecTypes, Ti}
-    stripe_nest(safe) = stripe_nest(safe, Ws...)
-    stripe_nest(safe, W) = stripe_body(safe, W)
-    function stripe_nest(safe, W, tail...)
-        return quote
-            if w <= $W
-                $(stripe_body(safe, W))
-            else
-                $(stripe_nest(safe, tail...))
-            end
-        end
+function LinearAlgebra.mul!(y::StridedVector, A::SparseMatrixVBC{U, W, Tv, Ti}, x::StridedVector, α::Number, β::Number) where {U, W, Tv<:SIMD.VecTypes, Ti}
+    Δw = fld(CpuId.simdbytes(), sizeof(Tv))
+    return _mul!(y, A, x, α, β, Val(Δw))
+end
+@generated function _mul!(y::StridedVector, A::SparseMatrixVBC{U, W, Tv, Ti}, x::StridedVector, α::Number, β::Number, ::Val{Δw}) where {U, W, Δw, Tv<:SIMD.VecTypes, Ti}
+    if Δw == 1
+        ws = (1:W...,)
+    else
+        ws = (1, Δw : Δw : (W + Δw - 1)...,)
     end
 
-    function stripe_body(safe, W)
+    function stripe_body(safe, w)
         if false && safe #TODO how do I zero out the other entries efficiently?
             thk = quote
-                tmp = convert(Vec{$W, eltype(y)}, vload(Vec{$W, eltype(x)}, x, j))
+                tmp = convert(Vec{$w, eltype(y)}, vload(Vec{$w, eltype(x)}, x, j))
             end
         else
             thk = quote
-                tmp = convert(Vec{$W, eltype(y)}, Vec{$W, eltype(x)}(($(map(Δj -> :($Δj < w ? x[j + $Δj] : zero(eltype(x))), 0:W-1)...),)))
+                tmp = convert(Vec{$w, eltype(y)}, Vec{$w, eltype(x)}(($(map(Δj -> :($Δj < w ? x[j + $Δj] : zero(eltype(x))), 0:w-1)...),)))
             end
         end
         thk = quote
@@ -30,34 +28,19 @@ AdjOrTransSparseMatrixVBC{U_max, Ws, Tv, Ti} = Union{SparseMatrixVBC{U_max, Ws, 
                 k = A_idx[Q]
                 i = Π_spl[k]
                 u = Π_spl[k + 1] - i
-                $(block_nest(W))
+                $(eq_nest(u->block_body(w, u), :u, 1:U))
                 q += u * w
             end
         end
         return thk
     end
 
-    block_nest(W) = block_nest(W, U_max)
-    function block_nest(W, U)
-        if U == 1
-            return block_body(W, U)
-        else
-            return quote
-                if u == $U
-                    $(block_body(W, U))
-                else
-                    $(block_nest(W, U - 1))
-                end
-            end
-        end
-    end
-
-    function block_body(W, U)
+    function block_body(w, u)
         thk = :()
-        for Δi = 0:U-1
+        for Δi = 0:u-1
             thk = quote
                 $thk
-                y[i + $Δi] += sum(convert(Vec{$W, eltype(y)}, vload(Vec{$W, Tv}, A_val, q + w * $Δi)) * tmp)
+                y[i + $Δi] += sum(convert(Vec{$w, eltype(y)}, vload(Vec{$w, Tv}, A_val, q + w * $Δi)) * tmp)
             end
         end
         return thk
@@ -81,45 +64,47 @@ AdjOrTransSparseMatrixVBC{U_max, Ws, Tv, Ti} = Union{SparseMatrixVBC{U_max, Ws, 
             A_val = A.val
             L = length(A.Φ)
             L_safe = L
-            while L_safe > 1 && n + 1 - Φ_spl[L_safe] < $(max(Ws...)) L_safe -= 1 end
-            for l = 1:(L_safe - 1)
+            while L_safe >= 1 && n + 1 - Φ_spl[L_safe] < Δw L_safe -= 1 end
+            for l = 1:L_safe
                 j = Φ_spl[l]
                 w = Φ_spl[l + 1] - j
-                $(stripe_nest(true))
+                $(le_nest(w->stripe_body(true, w), :w, ws))
             end
-            for l = L_safe:L
+            for l = L_safe + 1:L
                 j = Φ_spl[l]
                 w = Φ_spl[l + 1] - j
-                $(stripe_nest(false))
+                $(le_nest(w->stripe_body(false, w), :w, ws))
             end
             return y
+        end
+    end
+    if eltype(y) <: SIMD.FloatingTypes
+        thunk = quote
+            @fastmath $thunk
         end
     end
     return thunk
 end
 
-@generated function LinearAlgebra.mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrixVBC{U_max, Ws, Tv, Ti}}, Transpose{<:Any, <:SparseMatrixVBC{U_max, Ws, Tv, Ti}}}, x::StridedVector, α::Number, β::Number) where {U_max, Ws, Tv<:SIMD.VecTypes, Ti}
-    stripe_nest(safe) = stripe_nest(safe, Ws...)
-    stripe_nest(safe, W) = stripe_body(safe, W)
-    function stripe_nest(safe, W, tail...)
-        return quote
-            if w <= $W
-                $(stripe_body(safe, W))
-            else
-                $(stripe_nest(safe, tail...))
-            end
-        end
+function LinearAlgebra.mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrixVBC{U, W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrixVBC{U, W, Tv, Ti}}}, x::StridedVector, α::Number, β::Number) where {U, W, Tv<:SIMD.VecTypes, Ti}
+    Δw = fld(CpuId.simdbytes(), sizeof(Tv))
+    return _mul!(y, adjA, x, α, β, Val(Δw))
+end
+@generated function _mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrixVBC{U, W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrixVBC{U, W, Tv, Ti}}}, x::StridedVector, α::Number, β::Number, ::Val{Δw}) where {U, W, Tv<:SIMD.VecTypes, Ti, Δw}
+    if Δw == 1
+        ws = (1:W...,)
+    else
+        ws = (1, Δw : Δw : (W + Δw - 1)...,)
     end
-
-    function stripe_body(safe, W)
+    function stripe_body(safe, w)
         thk = quote
-            tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
+            tmp = Vec{$w, eltype(y)}(zero(eltype(y)))
             q = A_ofs[l]
             for Q = A_pos[l]:(A_pos[l + 1] - 1)
                 k = A_idx[Q]
                 i = Π_spl[k]
                 u = Π_spl[k + 1] - i
-                $(block_nest(W))
+                $(eq_nest(u->block_body(w, u), :u, 1:U))
                 q += u * w
             end
         end
@@ -138,27 +123,12 @@ end
         end
     end
 
-    block_nest(W) = block_nest(W, U_max)
-    function block_nest(W, U)
-        if U == 1
-            return block_body(W, U)
-        else
-            return quote
-                if u == $U
-                    $(block_body(W, U))
-                else
-                    $(block_nest(W, U - 1))
-                end
-            end
-        end
-    end
-
-    function block_body(W, U)
+    function block_body(w, u)
         thk = :()
-        for Δi = 0:U-1
+        for Δi = 0:u-1
             thk = quote
                 $thk
-                tmp += convert(Vec{$W, eltype(y)}, vload(Vec{$W, Tv}, A_val, q + w * $Δi)) * convert(eltype(y), x[i + $Δi])
+                tmp += convert(Vec{$w, eltype(y)}, vload(Vec{$w, Tv}, A_val, q + w * $Δi)) * convert(eltype(y), x[i + $Δi])
             end
         end
         return thk
@@ -183,18 +153,23 @@ end
             A_val = A.val
             L = length(A.Φ)
             L_safe = L
-            while L_safe > 1 && n + 1 - Φ_spl[L_safe] < $(max(Ws...)) L_safe -= 1 end
-            for l = 1:(L_safe - 1)
+            while L_safe >= 1 && n + 1 - Φ_spl[L_safe] < Δw L_safe -= 1 end
+            for l = 1:L_safe
                 j = Φ_spl[l]
                 w = Φ_spl[l + 1] - j
-                $(stripe_nest(true))
+                $(le_nest(w->stripe_body(true, w), :w, ws))
             end
-            for l = L_safe:L
+            for l = L_safe + 1:L
                 j = Φ_spl[l]
                 w = Φ_spl[l + 1] - j
-                $(stripe_nest(false))
+                $(le_nest(w->stripe_body(false, w), :w, ws))
             end
             return y
+        end
+    end
+    if eltype(y) <: SIMD.FloatingTypes
+        thunk = quote
+            @fastmath $thunk
         end
     end
     return thunk

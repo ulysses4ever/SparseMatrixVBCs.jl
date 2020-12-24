@@ -1,35 +1,34 @@
 using LinearAlgebra: Adjoint, Transpose
 using Base: StridedVector, StridedMatrix, StridedVecOrMat
 using SparseArrays: AdjOrTransStridedOrTriangularMatrix 
-AdjOrTransSparseMatrix1DVBC{Ws, Tv, Ti} = Union{SparseMatrix1DVBC{Ws, Tv, Ti}, Adjoint{<:Any,<:SparseMatrix1DVBC{Ws, Tv, Ti}}, Transpose{<:Any, <:SparseMatrix1DVBC{Ws, Tv, Ti}}}
+AdjOrTransSparseMatrix1DVBC{W, Tv, Ti} = Union{SparseMatrix1DVBC{W, Tv, Ti}, Adjoint{<:Any,<:SparseMatrix1DVBC{W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrix1DVBC{W, Tv, Ti}}}
 
-@generated function LinearAlgebra.mul!(y::StridedVector, A::SparseMatrix1DVBC{Ws, Tv, Ti}, x::StridedVector, α::Number, β::Number) where {Ws, Tv<:SIMD.VecTypes, Ti}
-    stripe_nest(safe, W) = stripe_body(safe, W)
-    function stripe_nest(safe, W, tail...)
-        return quote
-            if w <= $W
-                $(stripe_body(safe, W))
-            else
-                $(stripe_nest(safe, tail...))
-            end
-        end
+function LinearAlgebra.mul!(y::StridedVector, A::SparseMatrix1DVBC{W, Tv, Ti}, x::StridedVector, α::Number, β::Number) where {W, Tv<:SIMD.VecTypes, Ti}
+    Δw = fld(CpuId.simdbytes(), sizeof(Tv))
+    return _mul!(y, A, x, α, β, Val(Δw))
+end
+@generated function _mul!(y::StridedVector, A::SparseMatrix1DVBC{W, Tv, Ti}, x::StridedVector, α::Number, β::Number, ::Val{Δw}) where {W, Tv<:SIMD.VecTypes, Ti, Δw}
+    if Δw == 1
+        ws = (1:W...,)
+    else
+        ws = (1, Δw : Δw : (W + Δw - 1)...,)
     end
 
-    function stripe_body(safe, W)
+    function stripe_body(safe, w)
         if false && safe #TODO how do I zero out the other entries efficiently?
             thk = quote
-                tmp = convert(Vec{$W, eltype(y)}, vload(Vec{$W, eltype(x)}, x, j))
+                tmp = convert(Vec{$w, eltype(y)}, vload(Vec{$w, eltype(x)}, x, j))
             end
         else
             thk = quote
-                tmp = convert(Vec{$W, eltype(y)}, Vec{$W, eltype(x)}(($(map(Δj -> :($Δj < w ? x[j + $Δj] : zero(eltype(x))), 0:W-1)...),)))
+                tmp = convert(Vec{$w, eltype(y)}, Vec{$w, eltype(x)}(($(map(Δj -> :($Δj < w ? x[j + $Δj] : zero(eltype(x))), 0:w-1)...),)))
             end
         end
         thk = quote
             $thk
             q = A_ofs[l]
             for Q = A_pos[l]:(A_pos[l + 1] - 1)
-                y[A_idx[Q]] += sum(convert(Vec{$W, eltype(y)}, vload(Vec{$W, Tv}, A_val, q)) * tmp)
+                y[A_idx[Q]] += sum(convert(Vec{$w, eltype(y)}, vload(Vec{$w, Tv}, A_val, q)) * tmp)
                 q += w
             end
         end
@@ -55,41 +54,48 @@ AdjOrTransSparseMatrix1DVBC{Ws, Tv, Ti} = Union{SparseMatrix1DVBC{Ws, Tv, Ti}, A
             A_ofs = A.ofs
             A_val = A.val
             L = length(A.Φ)
-            for l = 1:(L - $(max(Ws...)) - 1)
+            L_safe = L
+            while L_safe >= 1 && n + 1 - Φ_spl[L_safe] < Δw L_safe -= 1 end
+            for l = 1:L_safe
                 j = Φ_spl[l]
                 w = Φ_spl[l + 1] - j
-                $(stripe_nest(true, Ws...))
+                $(le_nest(w->stripe_body(true, w), :w, ws))
             end
-            for l = max(1, (L - $(max(Ws...)))):L
+            for l = L_safe + 1:L
                 j = Φ_spl[l]
                 w = Φ_spl[l + 1] - j
-                $(stripe_nest(false, Ws...))
+                $(le_nest(w->stripe_body(false, w), :w, ws))
             end
             return y
+        end
+    end
+
+    if eltype(y) <: SIMD.FloatingTypes
+        thunk = quote
+            @fastmath $thunk
         end
     end
 
     return thunk
 end
 
-@generated function LinearAlgebra.mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrix1DVBC{Ws, Tv, Ti}}, Transpose{<:Any, <:SparseMatrix1DVBC{Ws, Tv, Ti}}}, x::StridedVector, α::Number, β::Number) where {Ws, Tv<:SIMD.VecTypes, Ti}
-    stripe_nest(safe, W) = stripe_body(safe, W)
-    function stripe_nest(safe, W, tail...)
-        return quote
-            if w <= $W
-                $(stripe_body(safe, W))
-            else
-                $(stripe_nest(safe, tail...))
-            end
-        end
+function LinearAlgebra.mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrix1DVBC{W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrix1DVBC{W, Tv, Ti}}}, x::StridedVector, α::Number, β::Number) where {W, Tv<:SIMD.VecTypes, Ti}
+    Δw = fld(CpuId.simdbytes(), sizeof(Tv))
+    _mul!(y, adjA, x, α, β, Val(Δw))
+end
+@generated function _mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrix1DVBC{W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrix1DVBC{W, Tv, Ti}}}, x::StridedVector, α::Number, β::Number, ::Val{Δw}) where {W, Tv<:SIMD.VecTypes, Ti, Δw}
+    if Δw == 1
+        ws = (1:W...,)
+    else
+        ws = (1, Δw : Δw : (W + Δw - 1)...,)
     end
 
-    function stripe_body(safe, W)
+    function stripe_body(safe, w)
         thk = quote
-            tmp = Vec{$W, eltype(y)}(zero(eltype(y)))
+            tmp = Vec{$w, eltype(y)}(zero(eltype(y)))
             q = A_ofs[l]
             for Q = A_pos[l]:(A_pos[l + 1] - 1)
-                tmp += convert(Vec{$W, eltype(y)}, vload(Vec{$W, Tv}, A_val, q)) * convert(eltype(y), x[A_idx[Q]])
+                tmp += convert(Vec{$w, eltype(y)}, vload(Vec{$w, Tv}, A_val, q)) * convert(eltype(y), x[A_idx[Q]])
                 q += w
             end
         end
@@ -129,17 +135,24 @@ end
             A_ofs = A.ofs
             A_val = A.val
             L = length(A.Φ)
-            for l = 1:(L - $(max(Ws...)) - 1)
+            L_safe = L
+            while L_safe >= 1 && n + 1 - Φ_spl[L_safe] < Δw L_safe -= 1 end
+            for l = 1:L_safe
                 j = Φ_spl[l]
                 w = Φ_spl[l + 1] - j
-                $(stripe_nest(true, Ws...))
+                $(le_nest(w->stripe_body(true, w), :w, ws))
             end
-            for l = max(1, (L - $(max(Ws...)))):L
+            for l = L_safe + 1:L
                 j = Φ_spl[l]
                 w = Φ_spl[l + 1] - j
-                $(stripe_nest(false, Ws...))
+                $(le_nest(w->stripe_body(false, w), :w, ws))
             end
             return y
+        end
+    end
+    if eltype(y) <: SIMD.FloatingTypes
+        thunk = quote
+            @fastmath $thunk
         end
     end
     return thunk

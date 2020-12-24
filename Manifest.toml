@@ -26,6 +26,12 @@ path = "/Users/Peter/Projects/ChainPartitioners.jl"
 uuid = "7a2a9441-b812-4af5-b203-314e7cbd5d81"
 version = "1.0.2"
 
+[[CpuId]]
+deps = ["Markdown", "Test"]
+git-tree-sha1 = "f0464e499ab9973b43c20f8216d088b61fda80c6"
+uuid = "adafc99b-e345-5852-983c-f28acb93d879"
+version = "0.2.2"
+
 [[Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"

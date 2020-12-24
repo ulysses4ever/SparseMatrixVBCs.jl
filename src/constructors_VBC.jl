@@ -1,21 +1,21 @@
-default_partitioner(::Type{<:SparseMatrix1DVBC{U_max, Ws}}) where {U_max, Ws} =
+default_partitioner(::Type{<:SparseMatrix1DVBC{U, W}}) where {U, W} =
     AlternatePacker(
-        DynamicTotalChunker(model_init_SparseMatrixVBC_memory(Tv, Ti), max(Ws...)),
-        DynamicTotalChunker(model_SparseMatrixVBC_memory(Tv, Ti), U_max)
+        DynamicTotalChunker(model_init_SparseMatrixVBC_memory(Tv, Ti), W),
+        DynamicTotalChunker(model_SparseMatrixVBC_memory(Tv, Ti), U)
     )
 
-function SparseMatrixVBC{U_max, Ws}(A::SparseMatrixCSC{Tv, Ti}, method=default_partitioner(SparseMatrixVBC{U_max, Ws})) where {U_max, Ws, Tv, Ti}
+function SparseMatrixVBC{U, W}(A::SparseMatrixCSC{Tv, Ti}, method=default_partitioner(SparseMatrixVBC{U, W})) where {U, W, Tv, Ti}
     x_pos = Ref(Ti[])
     x_ofs = Ref(Ti[])
     Π, Φ = pack_plaid(A, method, x_pos=x_pos, x_ofs=x_ofs)
     if length(x_pos[]) == 0 || length(x_ofs[]) == 0
-        return SparseMatrixVBC{U_max, Ws}(A, convert(SplitPartition, Π), convert(SplitPartition, Φ))
+        return SparseMatrixVBC{U, W}(A, convert(SplitPartition, Π), convert(SplitPartition, Φ))
     else
-        return _construct_SparseMatrixVBC(Val(U_max), Val(Ws), A, Π, Φ, x_pos[], x_ofs[])
+        return _construct_SparseMatrixVBC(Val(U), Val(W), A, Π, Φ, x_pos[], x_ofs[])
     end
 end
 
-function SparseMatrixVBC{U_max, Ws}(A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartition{Ti}, Φ::SplitPartition{Ti}) where {U_max, Ws, Tv, Ti}
+function SparseMatrixVBC{U, W}(A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartition{Ti}, Φ::SplitPartition{Ti}) where {U, W, Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
         K = length(Π)
@@ -47,11 +47,11 @@ function SparseMatrixVBC{U_max, Ws}(A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartiti
                 hst[k] = l
             end
         end
-        return _construct_SparseMatrixVBC(Val(U_max), Val(Ws), A, Π, Φ, Π_asg, pos, ofs)
+        return _construct_SparseMatrixVBC(Val(U), Val(W), A, Π, Φ, Π_asg, pos, ofs)
     end
 end
 
-function _construct_SparseMatrixVBC(::Val{U_max}, ::Val{Ws}, A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartition{Ti}, Φ::SplitPartition{Ti}, Π_asg::Vector{Ti}, pos::Vector{Ti}, ofs::Vector{Ti}) where {U_max, Ws, Tv, Ti}
+function _construct_SparseMatrixVBC(::Val{U}, ::Val{W}, A::SparseMatrixCSC{Tv, Ti}, Π::SplitPartition{Ti}, Φ::SplitPartition{Ti}, Π_asg::Vector{Ti}, pos::Vector{Ti}, ofs::Vector{Ti}) where {U, W, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
@@ -67,21 +67,22 @@ function _construct_SparseMatrixVBC(::Val{U_max}, ::Val{Ws}, A::SparseMatrixCSC{
         Φ_spl = Φ.spl
 
         idx = Vector{Ti}(undef, pos[end] - 1)
-        val = Vector{Tv}(undef, ofs[end] - 1 + U_max * max(Ws...))
-        for Q = ofs[end] : ofs[end]  - 1 + U_max * max(Ws...) #extra crap at the end keeps vector access in bounds 
+        Δw = fld(CpuId.simdbytes(), sizeof(Tv)) #TODO need to define an upper limit on this one
+        val = Vector{Tv}(undef, ofs[end] - 1 + U * (Δw * cld(W, Δw)))
+        for Q = ofs[end] : ofs[end]  - 1 + U * (Δw * cld(W, Δw)) #extra stuff to keep vector access in bounds 
             val[Q] = zero(Tv)
         end
 
-        A_q = ones(Int, max(Ws...))
+        A_q = ones(Int, W)
 
         for k = 1:K
-            @assert Π_spl[k + 1] - Π_spl[k] <= U_max
+            @assert Π_spl[k + 1] - Π_spl[k] <= U
         end
 
         for l = 1:L
             j = Φ_spl[l]
             w = Φ_spl[l + 1] - j
-            @assert w <= max(Ws...)
+            @assert w <= W
             if w == 1
                 Q = pos[l]
                 q = ofs[l]
@@ -147,6 +148,6 @@ function _construct_SparseMatrixVBC(::Val{U_max}, ::Val{Ws}, A::SparseMatrixCSC{
                 end
             end
         end
-        return SparseMatrixVBC{U_max, Ws, Tv, Ti}(m, n, Π, Φ, pos, idx, ofs, val)
+        return SparseMatrixVBC{U, W, Tv, Ti}(m, n, Π, Φ, pos, idx, ofs, val)
     end
 end

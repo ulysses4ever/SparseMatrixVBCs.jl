@@ -21,10 +21,10 @@ include("matrices.jl")
             OverlapChunker(0.9, 4),
             DynamicTotalChunker(model_SparseMatrix1DVBC_blocks(), 4),
             DynamicTotalChunker(model_SparseMatrix1DVBC_memory(Float64, Int), 4),
-            DynamicTotalChunker(model_SparseMatrix1DVBC_time((1, 2, 4), Float64, Int), 4),
+            #DynamicTotalChunker(model_SparseMatrix1DVBC_time(4, Float64, Int), 4),
         ]
             (m, n) = size(A)
-            B = SparseMatrix1DVBC{(1, 2, 4)}(A, method)
+            B = SparseMatrix1DVBC{4}(A, method)
 
             x = zeros(eltype(A), n)
             y_ref = A * x
@@ -58,7 +58,7 @@ include("matrices.jl")
             AlternatingPacker(OverlapChunker(0.9, 4), OverlapChunker(0.9, 4)),
         ]
             (m, n) = size(A)
-            B = SparseMatrixVBC{4, (1, 2, 4)}(A, method)
+            B = SparseMatrixVBC{4, 4}(A, method)
 
             x = zeros(eltype(A), n)
             y_ref = A * x
