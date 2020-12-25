@@ -4,7 +4,7 @@ using SparseArrays: AdjOrTransStridedOrTriangularMatrix
 AdjOrTransSparseMatrix1DVBC{W, Tv, Ti} = Union{SparseMatrix1DVBC{W, Tv, Ti}, Adjoint{<:Any,<:SparseMatrix1DVBC{W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrix1DVBC{W, Tv, Ti}}}
 
 function LinearAlgebra.mul!(y::StridedVector, A::SparseMatrix1DVBC{W, Tv, Ti}, x::StridedVector, α::Number, β::Number) where {W, Tv<:SIMD.VecTypes, Ti}
-    Δw = fld(DEFAULT_SIMD_SIZE, sizeof(Tv))
+    Δw = fld(DEFAULT_SIMD_SIZE, sizeof(eltype(y)))
     return _mul!(y, A, x, α, β, Val(Δw))
 end
 @generated function _mul!(y::StridedVector, A::SparseMatrix1DVBC{W, Tv, Ti}, x::StridedVector, α::Number, β::Number, ::Val{Δw}) where {W, Tv<:SIMD.VecTypes, Ti, Δw}
@@ -80,7 +80,7 @@ end
 end
 
 function LinearAlgebra.mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrix1DVBC{W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrix1DVBC{W, Tv, Ti}}}, x::StridedVector, α::Number, β::Number) where {W, Tv<:SIMD.VecTypes, Ti}
-    Δw = fld(DEFAULT_SIMD_SIZE, sizeof(Tv))
+    Δw = fld(DEFAULT_SIMD_SIZE, sizeof(eltype(y)))
     _mul!(y, adjA, x, α, β, Val(Δw))
 end
 @generated function _mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrix1DVBC{W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrix1DVBC{W, Tv, Ti}}}, x::StridedVector, α::Number, β::Number, ::Val{Δw}) where {W, Tv<:SIMD.VecTypes, Ti, Δw}
