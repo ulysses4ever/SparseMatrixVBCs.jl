@@ -8,6 +8,7 @@ using BenchmarkTools
 using BSON
 using Statistics
 using LinearAlgebra
+using Tune
 
 using CpuId
 const DEFAULT_SIMD_SIZE = CpuId.simdbytes()

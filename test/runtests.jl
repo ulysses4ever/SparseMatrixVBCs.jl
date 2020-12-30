@@ -20,7 +20,7 @@ include("matrices.jl")
             StrictChunker(4),
             OverlapChunker(0.9, 4),
             DynamicTotalChunker(model_SparseMatrix1DVBC_blocks(), 4),
-            DynamicTotalChunker(model_SparseMatrix1DVBC_memory(Float64, Int), 4),
+            DynamicTotalChunker(model_SparseMatrix1DVBC_memory(4, Float64, Int), 4),
             #DynamicTotalChunker(model_SparseMatrix1DVBC_time(4, Float64, Int), 4),
         ]
             (m, n) = size(A)

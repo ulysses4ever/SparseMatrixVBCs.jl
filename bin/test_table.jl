@@ -38,7 +38,7 @@ for mtx in [
         ("strict", StrictChunker(8)),
         ("overlap", OverlapChunker(0.9, 8)),
         ("min blocks", DynamicTotalChunker(model_SparseMatrix1DVBC_blocks(), 8)),
-        ("min memory", DynamicTotalChunker(model_SparseMatrix1DVBC_memory(eltype(A), Int), 8)),
+        ("min memory", DynamicTotalChunker(model_SparseMatrix1DVBC_memory(8, eltype(A), Int), 8)),
         ("min time", DynamicTotalChunker(model_SparseMatrix1DVBC_time(8, eltype(A), Int), 8)),
     ]
         B = SparseMatrix1DVBC{8}(A, method)
