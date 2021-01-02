@@ -102,7 +102,6 @@ model_SparseMatrixVBC_time(R, U, W, Tv, Ti) = BlockComponentCostModel{Float64}(U
         end
     end
     D = reduce(hcat, ds)
-    println(size(D))
     P = (Diagonal(sqrt.(C)) * D') \ (Diagonal(sqrt.(C)) * T)
     α_row = (P[1:U]...,)
     α_col = (P[U + 1:U + W]...,)
