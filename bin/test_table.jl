@@ -1,5 +1,5 @@
 using SparseArrays
-using SparseMatrix1DVBCs
+using SparseMatrixVBCs
 using LinearAlgebra
 using MatrixDepot
 using BenchmarkTools

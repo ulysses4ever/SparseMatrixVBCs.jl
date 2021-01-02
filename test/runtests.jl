@@ -2,12 +2,12 @@ using Test
 using Random
 using ChainPartitioners
 using SparseArrays
-using SparseMatrix1DVBCs
+using SparseMatrixVBCs
 using LinearAlgebra
 
 include("matrices.jl")
 
-@testset "SparseMatrix1DVBCs" begin
+@testset "SparseMatrixVBCs" begin
     Random.seed!(0xDEADBEEF)
     for A in [
         collect(values(matrices));

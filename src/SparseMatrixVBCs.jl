@@ -1,4 +1,4 @@
-module SparseMatrix1DVBCs
+module SparseMatrixVBCs
 
 using SparseArrays
 using ChainPartitioners
