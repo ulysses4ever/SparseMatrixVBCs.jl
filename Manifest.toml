@@ -22,9 +22,9 @@ version = "0.5.0"
 
 [[ChainPartitioners]]
 deps = ["LinearAlgebra", "Random", "Requires", "SparseArrays", "Suppressor", "Tune"]
-git-tree-sha1 = "d0cd86f466109bb4e3b49ca5562fa33f4e84956a"
+git-tree-sha1 = "876c80e5e657477338bd5847763b4024c7a988b8"
 uuid = "7a2a9441-b812-4af5-b203-314e7cbd5d81"
-version = "1.1.1"
+version = "1.1.2"
 
 [[CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
