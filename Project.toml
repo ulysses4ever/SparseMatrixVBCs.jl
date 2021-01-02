@@ -16,6 +16,9 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Tune = "fedcd5e3-25fa-4517-9d96-0ffbee4aa29d"
 
+[compat]
+SIMD = "3"
+
 [extras]
 ChainPartitioners = "7a2a9441-b812-4af5-b203-314e7cbd5d81"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
