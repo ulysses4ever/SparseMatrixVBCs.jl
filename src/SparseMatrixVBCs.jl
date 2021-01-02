@@ -5,7 +5,6 @@ using ChainPartitioners
 using SIMD
 using Hwloc
 using BenchmarkTools
-using BSON
 using Statistics
 using LinearAlgebra
 using Tune

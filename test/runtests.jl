@@ -19,7 +19,7 @@ include("matrices.jl")
         for method in [
             StrictChunker(4),
             OverlapChunker(0.9, 4),
-            DynamicTotalChunker(model_SparseMatrix1DVBC_blocks(), 4),
+            DynamicTotalChunker(model_SparseMatrix1DVBC_blocks(4), 4),
             DynamicTotalChunker(model_SparseMatrix1DVBC_memory(4, Float64, Int), 4),
             #DynamicTotalChunker(model_SparseMatrix1DVBC_time(4, Float64, Int), 4),
         ]
