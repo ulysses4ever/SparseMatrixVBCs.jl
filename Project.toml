@@ -1,7 +1,7 @@
-name = "SparseMatrix1DVBCs"
-uuid = "86cc4f4d-8dd3-4f27-8516-1c81281fce43"
-authors = ["Peter Ahrens <ptrahrens@gmail.com>"]
-version = "1.0.0"
+name = "SparseMatrixVBCs"
+uuid = "a2cef524-27b8-4ae6-a313-dc8a5ce3dcd5"
+authors = ["Peter Ahrens"]
+version = "0.1.0"
 
 [deps]
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
