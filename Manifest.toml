@@ -22,18 +22,14 @@ uuid = "7a2a9441-b812-4af5-b203-314e7cbd5d81"
 version = "1.1.3"
 
 [[CpuId]]
-deps = ["Markdown", "Test"]
-git-tree-sha1 = "f0464e499ab9973b43c20f8216d088b61fda80c6"
+deps = ["Markdown"]
+git-tree-sha1 = "32d125af0fb8ec3f8935896122c5e345709909e5"
 uuid = "adafc99b-e345-5852-983c-f28acb93d879"
-version = "0.2.2"
+version = "0.3.0"
 
 [[Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
-
-[[Distributed]]
-deps = ["Random", "Serialization", "Sockets"]
-uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[Hwloc]]
 deps = ["Hwloc_jll"]
@@ -86,11 +82,11 @@ version = "0.5.6"
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
-[[Memoize]]
+[[MemoizedMethods]]
 deps = ["MacroTools"]
-git-tree-sha1 = "2b1dfcba103de714d31c033b5dacc2e4a12c7caa"
-uuid = "c03570c3-d221-55d1-a50c-7939bbd78826"
-version = "0.4.4"
+git-tree-sha1 = "b8a508a80cdbe7dcfa5b32f66a338c586b9caa77"
+uuid = "2f808968-54ae-4603-8d72-6e67d20f0a1c"
+version = "0.1.0"
 
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
@@ -156,15 +152,11 @@ git-tree-sha1 = "a819d77f31f83e5792a76081eee1ea6342ab8787"
 uuid = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 version = "0.2.0"
 
-[[Test]]
-deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
-uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
 [[Tune]]
-deps = ["CpuId", "Memoize", "Scratch", "Serialization", "UUIDs"]
-git-tree-sha1 = "9c4e80d475ddfb5b42a929d345d49453dd93358c"
+deps = ["CpuId", "MemoizedMethods", "Scratch", "Serialization", "UUIDs"]
+git-tree-sha1 = "07027f4c57661847c540021338b83104ed0c8f6d"
 uuid = "fedcd5e3-25fa-4517-9d96-0ffbee4aa29d"
-version = "0.1.6"
+version = "0.1.7"
 
 [[UUIDs]]
 deps = ["Random", "SHA"]
