@@ -31,6 +31,19 @@ version = "0.3.0"
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
+[[DiskCaches]]
+deps = ["Pidfile", "Serialization"]
+git-tree-sha1 = "195099ba77290d60198b01dcaa62e0edbfbde50c"
+uuid = "83811839-e1fd-4dfd-90d4-61934971aaca"
+version = "0.1.0"
+
+[[Distributed]]
+deps = ["Random", "Serialization", "Sockets"]
+uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+
+[[FileWatching]]
+uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
+
 [[Hwloc]]
 deps = ["Hwloc_jll"]
 git-tree-sha1 = "2e3d1d4ab0e7296354539b2be081f71f4b694c0b"
@@ -84,9 +97,9 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[MemoizedMethods]]
 deps = ["MacroTools"]
-git-tree-sha1 = "b8a508a80cdbe7dcfa5b32f66a338c586b9caa77"
+git-tree-sha1 = "3402a7d9cf05067f89c98deb6ed3d99dafa60a42"
 uuid = "2f808968-54ae-4603-8d72-6e67d20f0a1c"
-version = "0.1.0"
+version = "0.1.1"
 
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
@@ -96,6 +109,12 @@ deps = ["Dates"]
 git-tree-sha1 = "50c9a9ed8c714945e01cd53a21007ed3865ed714"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 version = "1.0.15"
+
+[[Pidfile]]
+deps = ["FileWatching", "Test"]
+git-tree-sha1 = "1be8660b2064893cd2dae4bd004b589278e4440d"
+uuid = "fa939f87-e72e-5be4-a000-7fc836dbe307"
+version = "1.2.0"
 
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
@@ -152,11 +171,9 @@ git-tree-sha1 = "a819d77f31f83e5792a76081eee1ea6342ab8787"
 uuid = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 version = "0.2.0"
 
-[[Tune]]
-deps = ["CpuId", "MemoizedMethods", "Scratch", "Serialization", "UUIDs"]
-git-tree-sha1 = "07027f4c57661847c540021338b83104ed0c8f6d"
-uuid = "fedcd5e3-25fa-4517-9d96-0ffbee4aa29d"
-version = "0.1.7"
+[[Test]]
+deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
+uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[UUIDs]]
 deps = ["Random", "SHA"]

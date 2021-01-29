@@ -7,7 +7,10 @@ using Hwloc
 using BenchmarkTools
 using Statistics
 using LinearAlgebra
-using Tune
+using MemoizedMethods
+using DiskCaches
+using Scratch
+using SHA
 
 using CpuId
 const DEFAULT_SIMD_SIZE = CpuId.simdbytes()
@@ -76,8 +79,6 @@ struct SparseMatrixVBC{U, W, Tv, Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
 end
 
 Base.size(A::SparseMatrixVBC) = (A.m, A.n)
-
-const cachefile = joinpath(@__DIR__(), "cache.bson")
 
 include("util.jl")
 include("TrSpMV.jl")

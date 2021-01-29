@@ -4,7 +4,7 @@ model_SparseMatrix1DVBC_memory(W, Tv, Ti) = ColumnBlockComponentCostModel{Int}(W
 
 model_SparseMatrix1DVBC_time(W, Tv, Ti) = ColumnBlockComponentCostModel{Float64}(W, model_SparseMatrix1DVBC_time_params(W, Tv, Ti)...)
 
-@memoize @Vault() function model_SparseMatrix1DVBC_time_params(W, Tv, Ti, arch=arch_id())
+@memoize DiskCache(@get_scratch!("1DVBC_timings")) function model_SparseMatrix1DVBC_time_params(W, Tv, Ti, arch=arch_id())
     @info "calculating $(SparseMatrix1DVBC{W, Tv, Ti}) cost model..."
     @assert arch == arch_id()
 
@@ -57,7 +57,7 @@ model_SparseMatrixVBC_memory(U, W, Tv, Ti) = BlockComponentCostModel{Int}(U, W, 
 
 model_SparseMatrixVBC_time(R, U, W, Tv, Ti) = BlockComponentCostModel{Float64}(U, W, model_SparseMatrixVBC_time_params(R, U, W, Tv, Ti)...)
 
-@memoize @Vault() function model_SparseMatrixVBC_time_params(R, U, W, Tv, Ti, arch=arch_id())
+@memoize DiskCache(@get_scratch!("VBC_timings")) function model_SparseMatrixVBC_time_params(R, U, W, Tv, Ti, arch=arch_id())
     @info "calculating $(SparseMatrixVBC{U, W, Tv, Ti}) cost model..."
     @assert arch == arch_id()
 

@@ -48,3 +48,5 @@ function _eq_nest(f, x, n, ns...)
         end
     end
 end
+
+@memoize arch_id() = (sha2_256(string(cpuinfo()))...,)
