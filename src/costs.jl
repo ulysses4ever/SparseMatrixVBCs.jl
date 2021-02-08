@@ -1,11 +1,11 @@
-model_SparseMatrix1DVBC_blocks(W) = AffineNetCostModel(0, 0, 0, 1)
+model_SparseMatrix1DVBC_blocks() = AffineNetCostModel(0, 0, 0, 1)
 
-model_SparseMatrix1DVBC_memory(W, Tv, Ti) = ColumnBlockComponentCostModel{Int}(W, 3 * sizeof(Ti), (w) -> sizeof(Ti) + w * sizeof(Tv))
+model_SparseMatrix1DVBC_memory(Tv, Ti) = ColumnBlockComponentCostModel{Int}(3 * sizeof(Ti), (w) -> sizeof(Ti) + w * sizeof(Tv))
 
-model_SparseMatrix1DVBC_time(W, Tv, Ti) = ColumnBlockComponentCostModel{Float64}(W, model_SparseMatrix1DVBC_time_params(W, Tv, Ti)...)
+model_SparseMatrix1DVBC_TrSpMV_time(W, Tv, Ti, Tu) = ColumnBlockComponentCostModel{Float64}(model_SparseMatrix1DVBC_TrSpMV_time_params(W, Tv, Ti, Tu)...)
 
-@memoize DiskCache(@get_scratch!("1DVBC_timings")) function model_SparseMatrix1DVBC_time_params(W, Tv, Ti, arch=arch_id())
-    @info "calculating $(SparseMatrix1DVBC{W, Tv, Ti}) cost model..."
+@memoize DiskCache(@get_scratch!("1DVBC_TrSpMV_timings")) function model_SparseMatrix1DVBC_TrSpMV_time_params(W, Tv, Ti, Tu, arch=arch_id())
+    @info "calculating cost model for $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
     @assert arch == arch_id()
 
     #ms = (i = 1; [1; [i = max(i + 1, i + fld(prevpow(2, i), 4)) for _ = 1:19]])
@@ -23,8 +23,8 @@ model_SparseMatrix1DVBC_time(W, Tv, Ti) = ColumnBlockComponentCostModel{Float64}
                 n = w * L
                 A = sparse(ones(Tv, m, n))
                 B = SparseMatrix1DVBC{W}(A, pack_stripe(A, EquiChunker(w)))
-                x = ones(m) #TODO add x and y eltype and Δw info to autotuned params
-                y = ones(n) #TODO add x and y eltype and Δw info to autotuned params
+                x = ones(Tu, m)
+                y = ones(Tu, n)
                 d_α_col = zeros(W)
                 d_α_col[w] = L
                 d_β_col = zeros(W)
@@ -51,14 +51,14 @@ model_SparseMatrix1DVBC_time(W, Tv, Ti) = ColumnBlockComponentCostModel{Float64}
     return (α_col, β_col)
 end
 
-model_SparseMatrixVBC_blocks(U, W) = BlockComponentCostModel{Int}(U, W, 0, 0, (1,), (1, ))
+model_SparseMatrixVBC_blocks() = BlockComponentCostModel{Int}(0, 0, (1,), (1, ))
 
-model_SparseMatrixVBC_memory(U, W, Tv, Ti) = BlockComponentCostModel{Int}(U, W, sizeof(Ti), 3 * sizeof(Ti), (1, identity), (sizeof(Ti), (w)->(sizeof(Tv) * w)))
+model_SparseMatrixVBC_memory(Tv, Ti) = BlockComponentCostModel{Int}(sizeof(Ti), 3 * sizeof(Ti), (1, identity), (sizeof(Ti), (w)->(sizeof(Tv) * w)))
 
-model_SparseMatrixVBC_time(R, U, W, Tv, Ti) = BlockComponentCostModel{Float64}(U, W, model_SparseMatrixVBC_time_params(R, U, W, Tv, Ti)...)
+model_SparseMatrixVBC_TrSpMV_time(R, U, W, Tv, Ti, Tu) = BlockComponentCostModel{Float64}(model_SparseMatrixVBC_TrSpMV_time_params(R, U, W, Tv, Ti, Tu)...)
 
-@memoize DiskCache(@get_scratch!("VBC_timings")) function model_SparseMatrixVBC_time_params(R, U, W, Tv, Ti, arch=arch_id())
-    @info "calculating $(SparseMatrixVBC{U, W, Tv, Ti}) cost model..."
+@memoize DiskCache(@get_scratch!("VBC_TrSpMV_timings")) function model_SparseMatrixVBC_TrSpMV_time_params(R, U, W, Tv, Ti, Tu, arch=arch_id())
+    @info "calculating cost model for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
     @assert arch == arch_id()
 
     #Ks = (i = 1; [1; [i = max(i + 1, i + fld(prevpow(4, i), 2)) for _ = 1:8]])
@@ -78,8 +78,8 @@ model_SparseMatrixVBC_time(R, U, W, Tv, Ti) = BlockComponentCostModel{Float64}(U
                         (m, n) = (u * K, w * L)
                         A = sparse(ones(Tv, m, n))
                         B = SparseMatrixVBC{U, W}(A, pack_stripe(A', EquiChunker(u)), pack_stripe(A, EquiChunker(w)))
-                        x = ones(m) #TODO add x and y eltype and Δw info to autotuned params
-                        y = ones(n) #TODO add x and y eltype and Δw info to autotuned params
+                        x = ones(Tu, m)
+                        y = ones(Tu, n)
                         if Base.summarysize(B) + Base.summarysize(x) + Base.summarysize(y) < mem_max
                             d_α_row = zeros(U)
                             d_α_row[u] = K

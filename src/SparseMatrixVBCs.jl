@@ -18,11 +18,11 @@ const DEFAULT_SIMD_SIZE = CpuId.simdbytes()
 export SparseMatrix1DVBC
 export model_SparseMatrix1DVBC_blocks
 export model_SparseMatrix1DVBC_memory
-export model_SparseMatrix1DVBC_time
+export model_SparseMatrix1DVBC_TrSpMV_time
 export SparseMatrixVBC
 export model_SparseMatrixVBC_blocks
 export model_SparseMatrixVBC_memory
-export model_SparseMatrixVBC_time
+export model_SparseMatrixVBC_TrSpMV_time
 export TrSpMV!
 
 """

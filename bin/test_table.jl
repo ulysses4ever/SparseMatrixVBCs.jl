@@ -35,16 +35,18 @@ for mtx in [
         push!(rows, ["reference" setup_time mem run_time])
     end
 
-    mdl_blocks = model_SparseMatrix1DVBC_blocks(8)
-    mdl_memory = model_SparseMatrix1DVBC_memory(8, eltype(A), Int)
-    mdl_time = model_SparseMatrix1DVBC_time(8, eltype(A), Int)
+    limit_width(mdl) = ConstrainedCost(mdl, WidthCost(), 8)
+
+    mdl_blocks_1D = model_SparseMatrix1DVBC_blocks()
+    mdl_memory_1D = model_SparseMatrix1DVBC_memory(eltype(A), Int)
+    mdl_time_1D = model_SparseMatrix1DVBC_TrSpMV_time(8, eltype(A), Int, Float64)
 
     for (key, method) in [
         ("strict", StrictChunker(8)),
         ("overlap", OverlapChunker(0.9, 8)),
-        ("min blocks", DynamicTotalChunker(mdl_blocks, 8)),
-        ("min memory", DynamicTotalChunker(mdl_memory, 8)),
-        ("min time", DynamicTotalChunker(mdl_time, 8)),
+        ("min blocks", DynamicTotalChunker(limit_width(mdl_blocks_1D))),
+        ("min memory", DynamicTotalChunker(limit_width(mdl_memory_1D))),
+        ("min time", DynamicTotalChunker(limit_width(mdl_time_1D))),
     ]
         B = SparseMatrix1DVBC{8}(A, method)
         setup_time = time(@benchmark SparseMatrix1DVBC{8}($A, $method))
@@ -62,18 +64,28 @@ for mtx in [
         push!(rows, [key setup_time mem run_time])
     end
 
-    mdl_blocks_2D = model_SparseMatrixVBC_blocks(8, 8)
-    mdl_memory_2D = model_SparseMatrixVBC_memory(8, 8, eltype(A), Int)
-    mdl_time_2D = model_SparseMatrixVBC_time(2, 8, 8, eltype(A), Int)
+    mdl_blocks_2D = model_SparseMatrixVBC_blocks()
+    mdl_memory_2D = model_SparseMatrixVBC_memory(eltype(A), Int)
+    mdl_time_2D = model_SparseMatrixVBC_TrSpMV_time(2, 8, 8, eltype(A), Int, Float64)
+
     for (key, method) in [
-        ("1D 2D", AlternatingPacker(DynamicTotalChunker(model_SparseMatrix1DVBC_time(8, eltype(A), Int), 8), EquiChunker(1))),
+        ("1D 2D", AlternatingPacker(DynamicTotalChunker(limit_width(mdl_blocks_1D)), EquiChunker(1))),
         ("strict 2D", AlternatingPacker(StrictChunker(8), StrictChunker(8))),
         ("overlap 2D 0.9", AlternatingPacker(OverlapChunker(0.9, 8), OverlapChunker(0.9, 8))),
         ("overlap 2D 0.8", AlternatingPacker(OverlapChunker(0.8, 8), OverlapChunker(0.8, 8))),
         ("overlap 2D 0.7", AlternatingPacker(OverlapChunker(0.7, 8), OverlapChunker(0.7, 8))),
-        ("dynamic blocks 2D", AlternatingPacker(DynamicTotalChunker(mdl_blocks, 8), DynamicTotalChunker(permutedims(mdl_blocks_2D), 8), DynamicTotalChunker(mdl_blocks_2D, 8))),
-        ("dynamic memory 2D", AlternatingPacker(DynamicTotalChunker(mdl_memory, 8), DynamicTotalChunker(permutedims(mdl_memory_2D), 8), DynamicTotalChunker(mdl_memory_2D, 8))),
-        ("dynamic time 2D", AlternatingPacker(DynamicTotalChunker(mdl_time, 8), DynamicTotalChunker(permutedims(mdl_time_2D), 8), DynamicTotalChunker(mdl_time_2D, 8))),
+        ("dynamic blocks 2D", AlternatingPacker(
+            DynamicTotalChunker(limit_width(mdl_blocks_1D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_blocks_2D))),
+            DynamicTotalChunker(limit_width(mdl_blocks_2D)))),
+        ("dynamic memory 2D", AlternatingPacker(
+            DynamicTotalChunker(limit_width(mdl_memory_1D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
+            DynamicTotalChunker(limit_width(mdl_memory_2D)))),
+        ("dynamic time 2D", AlternatingPacker(
+            DynamicTotalChunker(limit_width(mdl_time_1D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_time_2D))),
+            DynamicTotalChunker(limit_width(mdl_time_2D)))),
     ]
         B = SparseMatrixVBC{8, 8}(A, method)
         setup_time = time(@benchmark SparseMatrixVBC{8, 8}($A, $method))

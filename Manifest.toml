@@ -16,10 +16,16 @@ uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 version = "0.5.0"
 
 [[ChainPartitioners]]
-deps = ["LinearAlgebra", "Random", "Requires", "SparseArrays", "Suppressor"]
-git-tree-sha1 = "302d3cc151489672428eec7b862f5b98887f4137"
+deps = ["DataStructures", "LinearAlgebra", "Random", "Requires", "SparseArrays", "Suppressor"]
+path = "/Users/Peter/Projects/ChainPartitioners.jl/"
 uuid = "7a2a9441-b812-4af5-b203-314e7cbd5d81"
 version = "1.1.3"
+
+[[Compat]]
+deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "SHA", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
+git-tree-sha1 = "919c7f3151e79ff196add81d7f4e45d91bbf420b"
+uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
+version = "3.25.0"
 
 [[CpuId]]
 deps = ["Markdown"]
@@ -27,9 +33,19 @@ git-tree-sha1 = "32d125af0fb8ec3f8935896122c5e345709909e5"
 uuid = "adafc99b-e345-5852-983c-f28acb93d879"
 version = "0.3.0"
 
+[[DataStructures]]
+deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
+git-tree-sha1 = "4437b64df1e0adccc3e5d1adbc3ac741095e4677"
+uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+version = "0.18.9"
+
 [[Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
+
+[[DelimitedFiles]]
+deps = ["Mmap"]
+uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiskCaches]]
 deps = ["Pidfile", "Serialization"]
@@ -104,6 +120,11 @@ version = "0.1.1"
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
+[[OrderedCollections]]
+git-tree-sha1 = "cf59cfed2e2c12e8a2ff0a4f1e9b2cd8650da6db"
+uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+version = "1.3.2"
+
 [[Parsers]]
 deps = ["Dates"]
 git-tree-sha1 = "50c9a9ed8c714945e01cd53a21007ed3865ed714"
@@ -154,6 +175,10 @@ version = "1.0.3"
 
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+
+[[SharedArrays]]
+deps = ["Distributed", "Mmap", "Random", "Serialization"]
+uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
 
 [[Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
