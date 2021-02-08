@@ -1,6 +1,13 @@
+struct Line{Tv}
+    a::Tv
+    b::Tv
+end
+
+@inline (p::Line)(x) = p.a + p.b * x
+
 model_SparseMatrix1DVBC_blocks() = AffineNetCostModel(0, 0, 0, 1)
 
-model_SparseMatrix1DVBC_memory(Tv, Ti) = ColumnBlockComponentCostModel{Int}(3 * sizeof(Ti), (w) -> sizeof(Ti) + w * sizeof(Tv))
+model_SparseMatrix1DVBC_memory(Tv, Ti) = ColumnBlockComponentCostModel{Int}(3 * sizeof(Ti), Line(sizeof(Ti), sizeof(Tv)))
 
 model_SparseMatrix1DVBC_TrSpMV_time(W, Tv, Ti, Tu) = ColumnBlockComponentCostModel{Float64}(model_SparseMatrix1DVBC_TrSpMV_time_params(W, Tv, Ti, Tu)...)
 
@@ -53,7 +60,7 @@ end
 
 model_SparseMatrixVBC_blocks() = BlockComponentCostModel{Int}(0, 0, (1,), (1, ))
 
-model_SparseMatrixVBC_memory(Tv, Ti) = BlockComponentCostModel{Int}(sizeof(Ti), 3 * sizeof(Ti), (1, identity), (sizeof(Ti), (w)->(sizeof(Tv) * w)))
+model_SparseMatrixVBC_memory(Tv, Ti) = BlockComponentCostModel{Int}(sizeof(Ti), 3 * sizeof(Ti), (Line(1, 0), Line(0, 1)), (Line(sizeof(Ti), 0), Line(0, sizeof(Tv))))
 
 model_SparseMatrixVBC_TrSpMV_time(R, U, W, Tv, Ti, Tu) = BlockComponentCostModel{Float64}(model_SparseMatrixVBC_TrSpMV_time_params(R, U, W, Tv, Ti, Tu)...)
 
