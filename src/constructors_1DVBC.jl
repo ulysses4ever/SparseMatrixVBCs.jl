@@ -1,7 +1,7 @@
 function SparseMatrix1DVBC{W}(A::SparseMatrixCSC{Tv, Ti}, method=DynamicTotalChunker(model_SparseMatrix1DVBC_memory(Tv, Ti), W)) where {W, Tv, Ti}
     x_net = Ref(Ti[])
     Φ = pack_stripe(A, method, x_net=x_net)
-    if length(x_net[]) == 0
+    if true || length(x_net[]) == 0 #TODO make permanent
         return SparseMatrix1DVBC{W}(A, Φ)
     else
         L = length(Φ)
