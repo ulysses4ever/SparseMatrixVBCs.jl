@@ -86,6 +86,26 @@ for mtx in [
             DynamicTotalChunker(limit_width(mdl_time_1D)),
             DynamicTotalChunker(limit_width(permutedims(mdl_time_2D))),
             DynamicTotalChunker(limit_width(mdl_time_2D)))),
+        ("dynamic memory 2D (1)", AlternatingPacker(
+            DynamicTotalChunker(limit_width(mdl_memory_1D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
+        )),
+        ("dynamic memory 2D (2)", AlternatingPacker(
+            DynamicTotalChunker(limit_width(mdl_memory_1D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
+            DynamicTotalChunker(limit_width(mdl_memory_2D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
+        )),
+        ("dynamic memory 2D (4)", AlternatingPacker(
+            DynamicTotalChunker(limit_width(mdl_memory_1D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
+            DynamicTotalChunker(limit_width(mdl_memory_2D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
+            DynamicTotalChunker(limit_width(mdl_memory_2D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
+            DynamicTotalChunker(limit_width(mdl_memory_2D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
+        )),
     ]
         B = SparseMatrixVBC{8, 8}(A, method)
         setup_time = time(@benchmark SparseMatrixVBC{8, 8}($A, $method))
