@@ -17,6 +17,7 @@ model_SparseMatrix1DVBC_TrSpMV_time(W, Tv, Ti, Tu) = ColumnBlockComponentCostMod
 
     #ms = (i = 1; [1; [i = max(i + 1, i + fld(prevpow(2, i), 4)) for _ = 1:19]])
     ms = [2^i for i = 0:8]
+    #ms = [16:16:256]
     mem_max = fld(first(filter(t->t.type_==:L1Cache, collect(Hwloc.topology_load()))).attr.size, 2) #Half the L1 cache size. Could be improved.
     T = Float64[]
     ds = Vector{Float64}[]
@@ -45,11 +46,10 @@ model_SparseMatrix1DVBC_TrSpMV_time(W, Tv, Ti, Tu) = ColumnBlockComponentCostMod
                 c += 1
             end
         end
-        append!(C, [1/c for _ = 1:c])
+        append!(C, [c for _ = 1:c])
     end
     D = reduce(hcat, ds)
-    println(size(D))
-    P = (Diagonal(sqrt.(C)) * D') \ (Diagonal(sqrt.(C)) * T)
+    P = (Diagonal(1 ./ (sqrt.(C) .* T)) * D') \ (1 ./ sqrt.(C))
     α_col = (P[1:W]...,)
     β_col = (P[W + 1:end]...,)
     @info "α_col: $α_col"
@@ -69,7 +69,8 @@ model_SparseMatrixVBC_TrSpMV_time(R, U, W, Tv, Ti, Tu) = BlockComponentCostModel
     @assert arch == arch_id()
 
     #Ks = (i = 1; [1; [i = max(i + 1, i + fld(prevpow(4, i), 2)) for _ = 1:8]])
-    Ks = [4^i for i = 0:8]
+    Ks = [2^i for i = 0:8]
+    #Ks = [16:16:256]
     Ls = Ks
     mem_max = fld(first(filter(t->t.type_==:L1Cache, collect(Hwloc.topology_load()))).attr.size, 2) #Half the L1 cache size. Could be improved.
     T = Float64[]
@@ -105,11 +106,11 @@ model_SparseMatrixVBC_TrSpMV_time(R, U, W, Tv, Ti, Tu) = BlockComponentCostModel
                     end
                 end
             end
-            append!(C, [1/c for _ = 1:c])
+            append!(C, [c for _ = 1:c])
         end
     end
     D = reduce(hcat, ds)
-    P = (Diagonal(sqrt.(C)) * D') \ (Diagonal(sqrt.(C)) * T)
+    P = (Diagonal(1 ./ (sqrt.(C) .* T)) * D') \ (1 ./ sqrt.(C))
     α_row = (P[1:U]...,)
     α_col = (P[U + 1:U + W]...,)
     β = collect(reshape(P[U + W + 1:end], U, W))
@@ -119,7 +120,9 @@ model_SparseMatrixVBC_TrSpMV_time(R, U, W, Tv, Ti, Tu) = BlockComponentCostModel
     @info "α_row: $α_row"
     @info "α_col: $α_col"
     @info "β: $β"
-    @info "β_reconstruct: $([sum(β_row[r][u] * β_col[r][w] for r = 1:R) for u = 1:U, w = 1:W])"
+    β_reconstruct = [sum(β_row[r][u] * β_col[r][w] for r = 1:R) for u = 1:U, w = 1:W]
+    @info "β_reconstruct: $(β_reconstruct)"
+    @info "β_error: $(maximum((β_reconstruct .- β)./β))"
     @info "β_row: $β_row"
     @info "β_col: $β_col"
     @info "done!"
