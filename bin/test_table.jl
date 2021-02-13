@@ -41,6 +41,7 @@ for mtx in [
     mdl_blocks_1D = model_SparseMatrix1DVBC_blocks()
     mdl_memory_1D = model_SparseMatrix1DVBC_memory(eltype(A), Int)
     mdl_time_1D = model_SparseMatrix1DVBC_TrSpMV_time(8, eltype(A), Int, Float64)
+    mdl_simple_1D = model_SparseMatrix1DVBC_TrSpMV_simple(8, eltype(A), Int, Float64)
 
     for (key, method) in [
         ("strict", StrictChunker(8)),
@@ -48,6 +49,7 @@ for mtx in [
         ("min blocks", DynamicTotalChunker(limit_width(mdl_blocks_1D))),
         ("min memory", DynamicTotalChunker(limit_width(mdl_memory_1D))),
         ("min time", DynamicTotalChunker(limit_width(mdl_time_1D))),
+        ("min simple", DynamicTotalChunker(limit_width(mdl_simple_1D))),
     ]
         B = SparseMatrix1DVBC{8}(A, method)
         setup_time = time(@benchmark SparseMatrix1DVBC{8}($A, $method))
@@ -69,6 +71,8 @@ for mtx in [
     mdl_blocks_2D = model_SparseMatrixVBC_blocks()
     mdl_memory_2D = model_SparseMatrixVBC_memory(eltype(A), Int)
     mdl_time_2D = model_SparseMatrixVBC_TrSpMV_time(2, 8, 8, eltype(A), Int, Float64)
+    mdl_time_2D_better = model_SparseMatrixVBC_TrSpMV_time(4, 8, 8, eltype(A), Int, Float64)
+    mdl_simple_2D = model_SparseMatrixVBC_TrSpMV_simple(8, 8, eltype(A), Int, Float64)
 
     for (key, method) in [
         ("1D 2D", AlternatingPacker(DynamicTotalChunker(limit_width(mdl_blocks_1D)), EquiChunker(1))),
@@ -80,15 +84,25 @@ for mtx in [
             DynamicTotalChunker(limit_width(mdl_blocks_1D)),
             DynamicTotalChunker(limit_width(permutedims(mdl_blocks_2D))),
             DynamicTotalChunker(limit_width(mdl_blocks_2D)))),
+        ("dynamic memory 2D ()", AlternatingPacker(
+            DynamicTotalChunker(limit_width(mdl_memory_1D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
+            DynamicTotalChunker(limit_width(mdl_memory_2D)),
+        )),
         ("dynamic time 2D", AlternatingPacker(
             DynamicTotalChunker(limit_width(mdl_time_1D)),
             DynamicTotalChunker(limit_width(permutedims(mdl_time_2D))),
             DynamicTotalChunker(limit_width(mdl_time_2D)),
         )),
-        ("dynamic memory 2D ()", AlternatingPacker(
-            DynamicTotalChunker(limit_width(mdl_memory_1D)),
-            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
-            DynamicTotalChunker(limit_width(mdl_memory_2D)),
+        ("dynamic time 2D +", AlternatingPacker(
+            DynamicTotalChunker(limit_width(mdl_time_1D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_time_2D_better))),
+            DynamicTotalChunker(limit_width(mdl_time_2D_better)),
+        )),
+        ("dynamic simple 2D", AlternatingPacker(
+            DynamicTotalChunker(limit_width(mdl_simple_1D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_simple_2D))),
+            DynamicTotalChunker(limit_width(mdl_simple_2D)),
         )),
     ]
         B = SparseMatrixVBC{8, 8}(A, method)
