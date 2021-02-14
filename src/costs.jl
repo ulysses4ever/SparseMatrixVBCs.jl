@@ -13,6 +13,10 @@ model_SparseMatrix1DVBC_TrSpMV_time(W, Tv, Ti, Tu) = ColumnBlockComponentCostMod
 
 model_SparseMatrix1DVBC_TrSpMV_simple(W, Tv, Ti, Tu) = ColumnBlockComponentCostModel{Float64}(model_SparseMatrix1DVBC_TrSpMV_simple_params(W, Tv, Ti, Tu)...)
 
+model_SparseMatrix1DVBC_TrSpMV_time2(W, Tv, Ti, Tu) = ColumnBlockComponentCostModel{Float64}(model_SparseMatrix1DVBC_TrSpMV_time_params2(W, Tv, Ti, Tu)...)
+
+model_SparseMatrix1DVBC_TrSpMV_simple2(W, Tv, Ti, Tu) = ColumnBlockComponentCostModel{Float64}(model_SparseMatrix1DVBC_TrSpMV_simple_params2(W, Tv, Ti, Tu)...)
+
 @memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_timings")) function model_SparseMatrix1DVBC_TrSpMV_time_data(W, Tv, Ti, Tu, arch=arch_id())
     @info "timing $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
     @assert arch == arch_id()
@@ -79,12 +83,72 @@ end
     return (0.0, Line(β_index, β_value))
 end
 
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_timings2")) function model_SparseMatrix1DVBC_TrSpMV_time_data2(W, Tv, Ti, Tu, arch=arch_id())
+    @info "collecting data for $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
+    @assert arch == arch_id()
+
+    m₀ = ceil(Int, (first(filter(t->t.type_==:L1Cache, collect(Hwloc.topology_load()))).attr.size)/min(sizeof(Ti), sizeof(Tu))) #Fill the L1 cache.
+    n₀ = m₀
+    T = Float64[]
+    ds = Vector{Float64}[]
+    for w in 1:W
+        ts = Float64[]
+        L₀ = cld(n₀, w)
+        for L in (L₀, 2L₀)
+            (m, n) = (m₀, w * L)
+            A = sparse(ones(Tv, m, n))
+            B = SparseMatrix1DVBC{W}(A, pack_stripe(A, EquiChunker(w)))
+            x = ones(Tu, m)
+            y = ones(Tu, n)
+            d_α_col = zeros(W)
+            d_α_col[w] = L
+            d_β_col = zeros(W)
+            d_β_col[w] = L * m
+            d = [d_α_col; d_β_col]
+            mul!(y, B', x)
+            t = (@belapsed mul!($y, $B', $x) evals=1_000)
+            push!(ds, d)
+            push!(T, t)
+            @info "w: $w m: $m n: $n L: $L t: $t"
+        end
+    end
+    D = reduce(hcat, ds)
+    return (D, T)
+end
+
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_time_params2")) function model_SparseMatrix1DVBC_TrSpMV_time_params2(W, Tv, Ti, Tu, arch=arch_id())
+    @info "calculating cost model for $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
+    (D, T) = model_SparseMatrix1DVBC_TrSpMV_time_data2(W, Tv, Ti, Tu, arch)
+    P = qr(Diagonal(1 ./ T) * D', Val(true)) \ ones(length(T))
+    α_col = (P[1:W]...,)
+    β_col = (P[W + 1:end]...,)
+    @info "α_col: $α_col"
+    @info "β_col: $β_col"
+    @info "done!"
+    return (α_col, β_col)
+end
+
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_simple_params2")) function model_SparseMatrix1DVBC_TrSpMV_simple_params2(W, Tv, Ti, Tu, arch=arch_id())
+    @info "calculating cost model for $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
+    (D, T) = model_SparseMatrix1DVBC_TrSpMV_time_data2(W, Tv, Ti, Tu, arch)
+    P = qr(Diagonal(1 ./ T) * D', Val(true)) \ ones(length(T))
+    α_col = (P[1:W]...,)
+    A = hcat(ones(W), collect(1:W))
+    y = P[W + 1:end]
+    (β_index, β_value) = A \ y
+    @info "results" (β_index, β_value)
+    @info "done!"
+    return (0.0, Line(β_index, β_value))
+end
+
 model_SparseMatrixVBC_blocks() = BlockComponentCostModel{Int}(0, 0, (1,), (1, ))
 
 model_SparseMatrixVBC_memory(Tv, Ti) = BlockComponentCostModel{Int}(sizeof(Ti), 3 * sizeof(Ti), (Line(1, 0), Line(0, 1)), (Line(sizeof(Ti), 0), Line(0, sizeof(Tv))))
 
 model_SparseMatrixVBC_TrSpMV_time(R, U, W, Tv, Ti, Tu) = BlockComponentCostModel{Float64}(model_SparseMatrixVBC_TrSpMV_time_params(R, U, W, Tv, Ti, Tu)...)
 model_SparseMatrixVBC_TrSpMV_simple(U, W, Tv, Ti, Tu) = BlockComponentCostModel{Float64}(model_SparseMatrixVBC_TrSpMV_simple_params(U, W, Tv, Ti, Tu)...)
+model_SparseMatrixVBC_TrSpMV_time2(R, U, W, Tv, Ti, Tu) = BlockComponentCostModel{Float64}(model_SparseMatrixVBC_TrSpMV_time_params2(R, U, W, Tv, Ti, Tu)...)
+model_SparseMatrixVBC_TrSpMV_simple2(U, W, Tv, Ti, Tu) = BlockComponentCostModel{Float64}(model_SparseMatrixVBC_TrSpMV_simple_params2(U, W, Tv, Ti, Tu)...)
 
 @memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_timings")) function model_SparseMatrixVBC_TrSpMV_time_data(U, W, Tv, Ti, Tu, arch=arch_id())
     @info "calculating cost model for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
@@ -159,6 +223,80 @@ end
 @memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_simple_params")) function model_SparseMatrixVBC_TrSpMV_simple_params(U, W, Tv, Ti, Tu, arch=arch_id())
     (D, C, T) = model_SparseMatrixVBC_TrSpMV_time_data(U, W, Tv, Ti, Tu, arch)
     P = (Diagonal(1 ./ (sqrt.(C) .* T)) * D') \ (1 ./ sqrt.(C))
+    α_row = (P[1:U]...,)
+    α_col = (P[U + 1:U + W]...,)
+    β = collect(reshape(P[U + W + 1:end], U, W))
+    A = hcat(ones(U * W), reshape([u * w for u = 1:U, w = 1:W], :))
+    y = P[U + W + 1:end]
+    (β_index, β_value) = A \ y
+    @info "results" (β_index, β_value)
+    return (0, 0, (Line(β_index, 0.0), Line(0.0, 1.0)), (Line(1.0, 0.0), Line(0.0, β_value)))
+end
+
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_timings2")) function model_SparseMatrixVBC_TrSpMV_time_data2(U, W, Tv, Ti, Tu, arch=arch_id())
+    @info "collecting data for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
+    @assert arch == arch_id()
+
+    m₀ = ceil(Int, (first(filter(t->t.type_==:L1Cache, collect(Hwloc.topology_load()))).attr.size)/min(sizeof(Ti), sizeof(Tu))) #Fill the L1 cache.
+    n₀ = m₀
+    T = Float64[]
+    ds = Vector{Float64}[]
+    for u in 1:U
+        for w in 1:W
+            ts = Float64[]
+            K₀ = cld(m₀, u)
+            L₀ = cld(n₀, w)
+            for (K, L) in ((K₀, L₀), (2K₀, L₀), (K₀, 2L₀))
+                (m, n) = (u * K, w * L)
+                A = sparse(ones(Tv, m, n))
+                B = SparseMatrixVBC{U, W}(A, pack_stripe(A', EquiChunker(u)), pack_stripe(A, EquiChunker(w)))
+                x = ones(Tu, m)
+                y = ones(Tu, n)
+                d_α_row = zeros(U)
+                d_α_row[u] = K
+                d_α_col = zeros(W)
+                d_α_col[w] = L
+                d_β = zeros(U, W)
+                d_β[u, w] = L * K
+                d = [d_α_row; d_α_col; reshape(d_β, :)]
+                mul!(y, B', x)
+                t = (@belapsed mul!($y, $B', $x) evals=1_000)
+                push!(ds, d)
+                push!(T, t)
+                @info "u: $u w: $w m: $m n: $n K: $K L: $L t: $t"
+            end
+        end
+    end
+    D = reduce(hcat, ds)
+    return (D, T)
+end
+
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_time_params2")) function model_SparseMatrixVBC_TrSpMV_time_params2(R, U, W, Tv, Ti, Tu, arch=arch_id())
+    @info "calculating cost model for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
+    (D, T) = model_SparseMatrixVBC_TrSpMV_time_data2(U, W, Tv, Ti, Tu, arch)
+    P = qr(Diagonal(1 ./ T) * D', Val(true)) \ ones(length(T))
+    α_row = (P[1:U]...,)
+    α_col = (P[U + 1:U + W]...,)
+    β = collect(reshape(P[U + W + 1:end], U, W))
+    F = svd(β)
+    β_row = (((F.U[:,r]...,) for r = 1:R)...,)
+    β_col = ((((F.S[r] * F.V[:,r])...,) for r = 1:R)...,)
+    @info "α_row: $α_row"
+    @info "α_col: $α_col"
+    @info "β: $β"
+    β_reconstruct = [sum(β_row[r][u] * β_col[r][w] for r = 1:R) for u = 1:U, w = 1:W]
+    @info "β_reconstruct: $(β_reconstruct)"
+    @info "β_error: $(maximum((β_reconstruct .- β)./β))"
+    @info "β_row: $β_row"
+    @info "β_col: $β_col"
+    @info "done!"
+    return (α_row, α_col, β_row, β_col)
+end
+
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_simple_params2")) function model_SparseMatrixVBC_TrSpMV_simple_params2(U, W, Tv, Ti, Tu, arch=arch_id())
+    @info "calculating cost model for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
+    (D, T) = model_SparseMatrixVBC_TrSpMV_time_data2(U, W, Tv, Ti, Tu, arch)
+    P = qr(Diagonal(1 ./ T) * D', Val(true)) \ ones(length(T))
     α_row = (P[1:U]...,)
     α_col = (P[U + 1:U + W]...,)
     β = collect(reshape(P[U + W + 1:end], U, W))
