@@ -47,7 +47,7 @@ end
     (αβ_row, α_col, β_col, α_block, β_block) = qr(D', Val(true)) \ T
     @info "results" (αβ_row, α_col, β_col, α_block, β_block)
     @info "done!"
-    return (Line(α_col, β_col), Line(α_block, β_block))
+    return (0.0, Line(α_block, β_block))
 end
 
 model_SparseMatrixVBC_blocks() = BlockComponentCostModel{Int}(0, 0, (1,), (1, ))
@@ -99,5 +99,5 @@ end
     (D, T) = model_SparseMatrixVBC_TrSpMV_time_data(U, W, Tv, Ti, Tu, arch)
     #(α_row, β_row, α_col, β_col, α_block, β_block) = qr(Diagonal(1 ./ T) * D', Val(true)) \ ones(length(T))
     @info "results" (α_row, β_row, α_col, β_col, α_block, β_block)
-    return (Line(α_row, β_row), Line(α_col, β_col), (Line(α_block, 0.0), Line(0.0, 1.0)), (Line(1.0, 0.0), Line(0.0, β_block)))
+    return (0.0, 0.0, (Line(α_block, 0.0), Line(0.0, 1.0)), (Line(1.0, 0.0), Line(0.0, β_block)))
 end
