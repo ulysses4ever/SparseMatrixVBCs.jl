@@ -36,21 +36,23 @@ for mtx in [
         push!(rows, ["reference" setup_time mem run_time 0])
     end
 
-    limit_width(mdl) = ConstrainedCost(mdl, WidthCost(), 8)
+    w_max = 2
+
+    limit_width(mdl) = ConstrainedCost(mdl, WidthCost(), w_max)
 
     mdl_blocks_1D = model_SparseMatrix1DVBC_blocks()
     mdl_memory_1D = model_SparseMatrix1DVBC_memory(eltype(A), Int)
-    mdl_time_1D = model_SparseMatrix1DVBC_TrSpMV_time(8, eltype(A), Int, Float64)
+    mdl_time_1D = model_SparseMatrix1DVBC_TrSpMV_time(w_max, eltype(A), Int, Float64)
 
     for (key, method) in [
-        ("strict", StrictChunker(8)),
-        ("overlap", OverlapChunker(0.9, 8)),
+        ("strict", StrictChunker(w_max)),
+        ("overlap", OverlapChunker(0.9, w_max)),
         ("min blocks", DynamicTotalChunker(limit_width(mdl_blocks_1D))),
         ("min memory", DynamicTotalChunker(limit_width(mdl_memory_1D))),
         ("min time", DynamicTotalChunker(limit_width(mdl_time_1D))),
     ]
-        B = SparseMatrix1DVBC{8}(A, method)
-        setup_time = time(@benchmark SparseMatrix1DVBC{8}($A, $method))
+        B = SparseMatrix1DVBC{w_max}(A, method)
+        setup_time = time(@benchmark SparseMatrix1DVBC{$w_max}($A, $method))
 
         x = rand(size(A, 1))
         y = rand(size(A, 2))
@@ -68,14 +70,14 @@ for mtx in [
 
     mdl_blocks_2D = model_SparseMatrixVBC_blocks()
     mdl_memory_2D = model_SparseMatrixVBC_memory(eltype(A), Int)
-    mdl_time_2D = model_SparseMatrixVBC_TrSpMV_time(8, 8, eltype(A), Int, Float64)
+    mdl_time_2D = model_SparseMatrixVBC_TrSpMV_time(w_max, w_max, eltype(A), Int, Float64)
 
     for (key, method) in [
         ("1D 2D", AlternatingPacker(DynamicTotalChunker(limit_width(mdl_blocks_1D)), EquiChunker(1))),
-        ("strict 2D", AlternatingPacker(StrictChunker(8), StrictChunker(8))),
-        ("overlap 2D 0.9", AlternatingPacker(OverlapChunker(0.9, 8), OverlapChunker(0.9, 8))),
-        ("overlap 2D 0.8", AlternatingPacker(OverlapChunker(0.8, 8), OverlapChunker(0.8, 8))),
-        ("overlap 2D 0.7", AlternatingPacker(OverlapChunker(0.7, 8), OverlapChunker(0.7, 8))),
+        ("strict 2D", AlternatingPacker(StrictChunker(w_max), StrictChunker(w_max))),
+        ("overlap 2D 0.9", AlternatingPacker(OverlapChunker(0.9, w_max), OverlapChunker(0.9, w_max))),
+        ("overlap 2D 0.8", AlternatingPacker(OverlapChunker(0.8, w_max), OverlapChunker(0.8, w_max))),
+        ("overlap 2D 0.7", AlternatingPacker(OverlapChunker(0.7, w_max), OverlapChunker(0.7, w_max))),
         ("dynamic blocks 2D", AlternatingPacker(
             DynamicTotalChunker(limit_width(mdl_blocks_1D)),
             DynamicTotalChunker(limit_width(permutedims(mdl_blocks_2D))),
@@ -85,14 +87,28 @@ for mtx in [
             DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
             DynamicTotalChunker(limit_width(mdl_memory_2D)),
         )),
+        ("dynamic memory 2D'", AlternatingPacker(
+            EquiChunker(1),
+            EquiChunker(1),
+            DynamicTotalChunker(limit_width(mdl_memory_2D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
+            DynamicTotalChunker(limit_width(mdl_memory_2D)),
+        )),
         ("dynamic time 2D", AlternatingPacker(
             DynamicTotalChunker(limit_width(mdl_time_1D)),
             DynamicTotalChunker(limit_width(permutedims(mdl_time_2D))),
             DynamicTotalChunker(limit_width(mdl_time_2D)),
         )),
+        ("dynamic time 2D'", AlternatingPacker(
+            EquiChunker(1),
+            EquiChunker(1),
+            DynamicTotalChunker(limit_width(mdl_time_2D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_time_2D))),
+            DynamicTotalChunker(limit_width(mdl_time_2D)),
+        )),
     ]
-        B = SparseMatrixVBC{8, 8}(A, method)
-        setup_time = time(@benchmark SparseMatrixVBC{8, 8}($A, $method))
+        B = SparseMatrixVBC{w_max, w_max}(A, method)
+        setup_time = time(@benchmark SparseMatrixVBC{$w_max, $w_max}($A, $method))
 
         x = rand(size(A, 1))
         y = rand(size(A, 2))
