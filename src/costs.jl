@@ -18,8 +18,7 @@ model_SparseMatrix1DVBC_TrSpMV_fancy(W, Tv, Ti, Tu) = ColumnBlockComponentCostMo
     @assert arch == arch_id()
 
     m₀ = ceil(Int, first(filter(t->t.type_==:L2Cache, collect(Hwloc.topology_load()))).attr.size/min(sizeof(Ti), sizeof(Tu)))
-    b₀ = ceil(Int, first(filter(t->t.type_==:L2Cache, collect(Hwloc.topology_load()))).attr.size/sizeof(Tv))
-    b₀ = max(b₀, 2m₀)
+    b₀ = ceil(Int, first(filter(t->t.type_==:L3Cache, collect(Hwloc.topology_load()))).attr.size/sizeof(Tv))
     n₀ = m₀
     T = Float64[]
     ms = Int[]
@@ -33,15 +32,24 @@ model_SparseMatrix1DVBC_TrSpMV_fancy(W, Tv, Ti, Tu) = ColumnBlockComponentCostMo
         L₀ = cld(n₀, w)
         for (m, L, b) in ((m₀, L₀, b₀), (m₀, 2L₀, b₀), (2m₀, L₀, b₀), (m₀, L₀, 2b₀))
             n = w * L
-            A = sparse(zeros(Tv, m, n))
             q = 0
+            A_ILh = Set{Tuple{Int, Int}}()
+            A_I = Int[]
+            A_J = Int[]
+            A_V = Tv[]
             while q < cld(b, w)
                 i, l = (rand(1:m), rand(1:L))
-                if A[i, l * w] == zero(Tv)
-                    A[i, l * w - w + 1:l * w] .= one(Tv)
+                if !((i, l) in A_ILh)
+                    push!(A_ILh, (i, l))
+                    for j = l * w - w + 1:l * w
+                        push!(A_I, i)
+                        push!(A_J, j)
+                        push!(A_V, rand(Tv))
+                    end
                     q += 1
                 end
             end
+            A = sparse(A_I, A_J, A_V, m, n)
             B = SparseMatrix1DVBC{W}(A, pack_stripe(A, EquiChunker(w)))
             x = ones(Tu, m)
             y = ones(Tu, n)
@@ -95,8 +103,8 @@ end
     end
 
     #tiebreak
-    α_col .+= [minimum(α_col) * 0.0001 * w for w = 1:W]
-    β_col .+= [minimum(β_col) * 0.0001 * w for w = 1:W]
+    α_col .+= [minimum(α_col) * 0.001 * w for w = 1:W]
+    β_col .+= [minimum(β_col) * 0.001 * w for w = 1:W]
 
     @info "results" α_row α_col β_col
     @info "done!"
@@ -116,8 +124,7 @@ model_SparseMatrixVBC_TrSpMV_fancy(R, U, W, Tv, Ti, Tu) = BlockComponentCostMode
     @assert arch == arch_id()
 
     m₀ = ceil(Int, first(filter(t->t.type_==:L2Cache, collect(Hwloc.topology_load()))).attr.size/min(sizeof(Ti), sizeof(Tu))) #Fill the L2 cache.
-    b₀ = ceil(Int, 2 * first(filter(t->t.type_==:L2Cache, collect(Hwloc.topology_load()))).attr.size/sizeof(Tv))
-    b₀ = max(b₀, 2m₀)
+    b₀ = ceil(Int, first(filter(t->t.type_==:L3Cache, collect(Hwloc.topology_load()))).attr.size/sizeof(Tv))
     n₀ = m₀
     T = Float64[]
     ms = Int[]
@@ -134,15 +141,24 @@ model_SparseMatrixVBC_TrSpMV_fancy(R, U, W, Tv, Ti, Tu) = BlockComponentCostMode
             L₀ = cld(n₀, w)
             for (K, L, b) in ((K₀, L₀, b₀), (K₀, 2L₀, b₀), (2K₀, L₀, b₀), (K₀, L₀, 2b₀))
                 (m, n) = (u * K, w * L)
-                A = sparse(zeros(Tv, m, n))
                 q = 0
+                A_KLh = Set{Tuple{Int, Int}}()
+                A_I = Int[]
+                A_J = Int[]
+                A_V = Tv[]
                 while q < cld(b, u * w)
                     k, l = (rand(1:K), rand(1:L))
-                    if A[k * u, l * w] == zero(Tv)
-                        A[k * u - u + 1: k * u, l * w - w + 1:l * w] .= one(Tv)
+                    if !((k, l) in A_KLh)
+                        push!(A_KLh, (k, l))
+                        for i = k * u - u + 1: k * u, j = l * w - w + 1:l * w
+                            push!(A_I, i)
+                            push!(A_J, j)
+                            push!(A_V, rand(Tv))
+                        end
                         q += 1
                     end
                 end
+                A = sparse(A_I, A_J, A_V, m, n)
                 B = SparseMatrixVBC{U, W}(A, pack_stripe(A', EquiChunker(u)), pack_stripe(A, EquiChunker(w)))
                 x = ones(Tu, m)
                 y = ones(Tu, n)
@@ -205,7 +221,7 @@ end
     end
 
     #tiebreak
-    β .+= [minimum(β) * 0.0001 * u * w for u = 1:U, w = 1:W]
+    β .+= [minimum(β) * 0.001 * u * w for u = 1:U, w = 1:W]
 
     F = svd(β)
     β_row = ((F.U[:,r] for r = 1:R)...,)

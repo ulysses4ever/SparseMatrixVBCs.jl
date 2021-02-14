@@ -52,6 +52,17 @@ for mtx in [
     mdl_time_1D = model_SparseMatrix1DVBC_TrSpMV_time(w_max, eltype(A), Int, Float64)
     mdl_fancy_1D = model_SparseMatrix1DVBC_TrSpMV_fancy(w_max, eltype(A), Int, Float64)
 
+    mdl_blocks_2D = model_SparseMatrixVBC_blocks()
+    mdl_memory_2D = model_SparseMatrixVBC_memory(eltype(A), Int)
+    mdl_time_2D = model_SparseMatrixVBC_TrSpMV_time(w_max, w_max, eltype(A), Int, Float64)
+    mdl_fancy_2D = model_SparseMatrixVBC_TrSpMV_fancy(3, w_max, w_max, eltype(A), Int, Float64)
+
+    function print_model_grid(mdl, U, W)
+        R = length(mdl.β_row)
+        display([sum(ChainPartitioners.block_component(mdl.β_row[r], u) * ChainPartitioners.block_component(mdl.β_col[r], w) for r = 1:R) for u = 1:U, w = 1:W])
+        println()
+    end
+
     for (key, method) in [
         ("strict", StrictChunker(w_max)),
         ("overlap", OverlapChunker(0.9, w_max)),
@@ -78,10 +89,6 @@ for mtx in [
         push!(rows, [key setup_time mem run_time model_time model_fancy])
     end
 
-    mdl_blocks_2D = model_SparseMatrixVBC_blocks()
-    mdl_memory_2D = model_SparseMatrixVBC_memory(eltype(A), Int)
-    mdl_time_2D = model_SparseMatrixVBC_TrSpMV_time(w_max, w_max, eltype(A), Int, Float64)
-    mdl_fancy_2D = model_SparseMatrixVBC_TrSpMV_fancy(3, w_max, w_max, eltype(A), Int, Float64)
 
     for (key, method) in [
         ("1D 2D", AlternatingPacker(DynamicTotalChunker(limit_width(mdl_blocks_1D)), EquiChunker(1))),
