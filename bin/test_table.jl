@@ -10,12 +10,19 @@ using ChainPartitioners
 using InteractiveUtils
 
 for mtx in [
-            "DIMACS10/chesapeake",
+            #"DIMACS10/chesapeake",
             "HB/bcsstk04",
             "Boeing/ct20stif",
-            "Rothberg/3dtube",
-            "HB/bcsstk02",
-            "Schmid/thermal1",
+
+            "Simon/raefsky4",
+            "FIDAP/ex11",
+            "Vavasis/av41092",
+            "Goodwin/rim",
+            "GHS_psdef/bmw7st_1",
+            "Williams/cop20k_A",
+            "Boeing/pwtk",
+            "Bova/rma10",
+            "GHS_psdef/s3dkq4m2",
            ]
     A = permutedims(sparse(mdopen(mtx).A))
 
@@ -33,16 +40,17 @@ for mtx in [
         run_time = time(@benchmark TrSpMV!($y, $A, $x))
         
         @assert y ≈ z
-        push!(rows, ["reference" setup_time mem run_time 0])
+        push!(rows, ["reference" setup_time mem run_time 0 0])
     end
 
-    w_max = 2
+    w_max = 4
 
     limit_width(mdl) = ConstrainedCost(mdl, WidthCost(), w_max)
 
     mdl_blocks_1D = model_SparseMatrix1DVBC_blocks()
     mdl_memory_1D = model_SparseMatrix1DVBC_memory(eltype(A), Int)
     mdl_time_1D = model_SparseMatrix1DVBC_TrSpMV_time(w_max, eltype(A), Int, Float64)
+    mdl_fancy_1D = model_SparseMatrix1DVBC_TrSpMV_fancy(w_max, eltype(A), Int, Float64)
 
     for (key, method) in [
         ("strict", StrictChunker(w_max)),
@@ -50,6 +58,7 @@ for mtx in [
         ("min blocks", DynamicTotalChunker(limit_width(mdl_blocks_1D))),
         ("min memory", DynamicTotalChunker(limit_width(mdl_memory_1D))),
         ("min time", DynamicTotalChunker(limit_width(mdl_time_1D))),
+        ("min fancy", DynamicTotalChunker(limit_width(mdl_fancy_1D))),
     ]
         B = SparseMatrix1DVBC{w_max}(A, method)
         setup_time = time(@benchmark SparseMatrix1DVBC{$w_max}($A, $method))
@@ -62,15 +71,17 @@ for mtx in [
 
         run_time = time(@benchmark mul!($y, $B', $x, true, false))
 
-        run_model = total_value(A, B.Φ, mdl_time_1D)
+        model_time = total_value(A, B.Φ, mdl_time_1D)
+        model_fancy = total_value(A, B.Φ, mdl_fancy_1D)
 
         @assert y ≈ z
-        push!(rows, [key setup_time mem run_time run_model])
+        push!(rows, [key setup_time mem run_time model_time model_fancy])
     end
 
     mdl_blocks_2D = model_SparseMatrixVBC_blocks()
     mdl_memory_2D = model_SparseMatrixVBC_memory(eltype(A), Int)
     mdl_time_2D = model_SparseMatrixVBC_TrSpMV_time(w_max, w_max, eltype(A), Int, Float64)
+    mdl_fancy_2D = model_SparseMatrixVBC_TrSpMV_fancy(3, w_max, w_max, eltype(A), Int, Float64)
 
     for (key, method) in [
         ("1D 2D", AlternatingPacker(DynamicTotalChunker(limit_width(mdl_blocks_1D)), EquiChunker(1))),
@@ -83,11 +94,6 @@ for mtx in [
             DynamicTotalChunker(limit_width(permutedims(mdl_blocks_2D))),
             DynamicTotalChunker(limit_width(mdl_blocks_2D)))),
         ("dynamic memory 2D", AlternatingPacker(
-            DynamicTotalChunker(limit_width(mdl_memory_1D)),
-            DynamicTotalChunker(limit_width(permutedims(mdl_memory_2D))),
-            DynamicTotalChunker(limit_width(mdl_memory_2D)),
-        )),
-        ("dynamic memory 2D'", AlternatingPacker(
             EquiChunker(1),
             EquiChunker(1),
             DynamicTotalChunker(limit_width(mdl_memory_2D)),
@@ -95,16 +101,18 @@ for mtx in [
             DynamicTotalChunker(limit_width(mdl_memory_2D)),
         )),
         ("dynamic time 2D", AlternatingPacker(
-            DynamicTotalChunker(limit_width(mdl_time_1D)),
+            EquiChunker(1),
+            EquiChunker(1),
+            DynamicTotalChunker(limit_width(mdl_time_2D)),
             DynamicTotalChunker(limit_width(permutedims(mdl_time_2D))),
             DynamicTotalChunker(limit_width(mdl_time_2D)),
         )),
-        ("dynamic time 2D'", AlternatingPacker(
+        ("dynamic fancy 2D", AlternatingPacker(
             EquiChunker(1),
             EquiChunker(1),
-            DynamicTotalChunker(limit_width(mdl_time_2D)),
-            DynamicTotalChunker(limit_width(permutedims(mdl_time_2D))),
-            DynamicTotalChunker(limit_width(mdl_time_2D)),
+            DynamicTotalChunker(limit_width(mdl_fancy_2D)),
+            DynamicTotalChunker(limit_width(permutedims(mdl_fancy_2D))),
+            DynamicTotalChunker(limit_width(mdl_fancy_2D)),
         )),
     ]
         B = SparseMatrixVBC{w_max, w_max}(A, method)
@@ -118,10 +126,11 @@ for mtx in [
 
         run_time = time(@benchmark mul!($y, $B', $x, true, false))
 
-        run_model = total_value(A, B.Π, B.Φ, mdl_time_2D) + ChainPartitioners.row_component_value(B.Π, mdl_time_2D)
+        model_time = total_value(A, B.Π, B.Φ, mdl_time_2D) + ChainPartitioners.row_component_value(B.Π, mdl_time_2D)
+        model_fancy = total_value(A, B.Π, B.Φ, mdl_fancy_2D) + ChainPartitioners.row_component_value(B.Π, mdl_fancy_2D)
 
         @assert y ≈ z
-        push!(rows, [key setup_time mem run_time run_model])
+        push!(rows, [key setup_time mem run_time model_time model_fancy])
     end
-    pretty_table(vcat(rows...), ["method", "setuptime", "memory", "runtime", "model"])
+    pretty_table(vcat(rows...), ["method", "setuptime", "memory", "runtime", "model", "fancy"])
 end

@@ -19,10 +19,12 @@ export SparseMatrix1DVBC
 export model_SparseMatrix1DVBC_blocks
 export model_SparseMatrix1DVBC_memory
 export model_SparseMatrix1DVBC_TrSpMV_time
+export model_SparseMatrix1DVBC_TrSpMV_fancy
 export SparseMatrixVBC
 export model_SparseMatrixVBC_blocks
 export model_SparseMatrixVBC_memory
 export model_SparseMatrixVBC_TrSpMV_time
+export model_SparseMatrixVBC_TrSpMV_fancy
 export TrSpMV!
 
 """
