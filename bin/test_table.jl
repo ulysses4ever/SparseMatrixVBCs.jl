@@ -43,7 +43,7 @@ for mtx in [
         push!(rows, ["reference" setup_time mem run_time 0 0])
     end
 
-    w_max = 4
+    w_max = 8
 
     limit_width(mdl) = ConstrainedCost(mdl, WidthCost(), w_max)
 
