@@ -17,7 +17,7 @@ version = "0.5.0"
 
 [[ChainPartitioners]]
 deps = ["DataStructures", "LinearAlgebra", "Random", "Requires", "SparseArrays", "Suppressor"]
-path = "/Users/Peter/Projects/ChainPartitioners.jl/"
+git-tree-sha1 = "a57422c16dbe4b2ef6aa290af03af6d5fefe72f7"
 uuid = "7a2a9441-b812-4af5-b203-314e7cbd5d81"
 version = "1.1.4"
 
