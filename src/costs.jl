@@ -17,8 +17,8 @@ model_SparseMatrix1DVBC_TrSpMV_fancy(W, Tv, Ti, Tu) = ColumnBlockComponentCostMo
     @info "collecting data for $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
     @assert arch == arch_id()
 
-    m₀ = ceil(Int, first(filter(t->t.type_==:L2Cache, collect(Hwloc.topology_load()))).attr.size/min(sizeof(Ti), sizeof(Tu)))
-    b₀ = ceil(Int, first(filter(t->t.type_==:L3Cache, collect(Hwloc.topology_load()))).attr.size/sizeof(Tv))
+    m₀ = ceil(Int, first(filter(t->t.type_==:L1Cache, collect(Hwloc.topology_load()))).attr.size/min(sizeof(Ti), sizeof(Tu)))
+    b₀ = ceil(Int, 8 * first(filter(t->t.type_==:L1Cache, collect(Hwloc.topology_load()))).attr.size/(sizeof(Tv) + sizeof(Ti)))
     n₀ = m₀
     T = Float64[]
     ms = Int[]
@@ -123,8 +123,8 @@ model_SparseMatrixVBC_TrSpMV_fancy(R, U, W, Tv, Ti, Tu) = BlockComponentCostMode
     @info "collecting data for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
     @assert arch == arch_id()
 
-    m₀ = ceil(Int, first(filter(t->t.type_==:L2Cache, collect(Hwloc.topology_load()))).attr.size/min(sizeof(Ti), sizeof(Tu))) #Fill the L2 cache.
-    b₀ = ceil(Int, first(filter(t->t.type_==:L3Cache, collect(Hwloc.topology_load()))).attr.size/sizeof(Tv))
+    m₀ = ceil(Int, first(filter(t->t.type_==:L1Cache, collect(Hwloc.topology_load()))).attr.size/min(sizeof(Ti), sizeof(Tu)))
+    b₀ = ceil(Int, 8 * first(filter(t->t.type_==:L1Cache, collect(Hwloc.topology_load()))).attr.size/sizeof(Tv))
     n₀ = m₀
     T = Float64[]
     ms = Int[]
