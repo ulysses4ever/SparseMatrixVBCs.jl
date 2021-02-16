@@ -177,5 +177,5 @@ end
 
 Base.:*(adjA::AdjOrTransSparseMatrixVBC, x::StridedVector{Tx}) where {Tx} =
     (T = Base.promote_op(LinearAlgebra.matprod, eltype(adjA), Tx); mul!(similar(x, T, size(adjA, 1)), adjA, x, true, false))
-Base.:*(adjA::AdjOrTransSparseMatrixVBC, B::AdjOrTransStridedOrTriangularMatrix) =
+Base.:*(adjA::AdjOrTransSparseMatrixVBC, B::AdjOrTransDenseMatrix) =
     (T = Base.promote_op(LinearAlgebra.matprod, eltype(adjA), eltype(B)); mul!(similar(B, T, (size(adjA, 1), size(B, 2))), adjA, B, true, false))

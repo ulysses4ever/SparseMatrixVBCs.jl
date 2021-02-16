@@ -1,7 +1,10 @@
 using LinearAlgebra: Adjoint, Transpose
 using Base: StridedVector, StridedMatrix, StridedVecOrMat
-using SparseArrays: AdjOrTransStridedOrTriangularMatrix 
 AdjOrTransSparseMatrix1DVBC{W, Tv, Ti} = Union{SparseMatrix1DVBC{W, Tv, Ti}, Adjoint{<:Any,<:SparseMatrix1DVBC{W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrix1DVBC{W, Tv, Ti}}}
+const DenseMatrixUnion = Union{StridedMatrix, LowerTriangular, UnitLowerTriangular, UpperTriangular, UnitUpperTriangular, BitMatrix}
+const AdjOrTransDenseMatrix = Union{DenseMatrixUnion,Adjoint{<:Any,<:DenseMatrixUnion},Transpose{<:Any,<:DenseMatrixUnion}}
+const DenseInputVector = Union{StridedVector, BitVector}
+const DenseInputVecOrMat = Union{AdjOrTransDenseMatrix, DenseInputVector}
 
 function LinearAlgebra.mul!(y::StridedVector, A::SparseMatrix1DVBC{W, Tv, Ti}, x::StridedVector, α::Number, β::Number) where {W, Tv<:SIMD.VecTypes, Ti}
     Δw = fld(DEFAULT_SIMD_SIZE, sizeof(eltype(y)))
@@ -160,5 +163,5 @@ end
 
 Base.:*(adjA::AdjOrTransSparseMatrix1DVBC, x::StridedVector{Tx}) where {Tx} =
     (T = Base.promote_op(LinearAlgebra.matprod, eltype(adjA), Tx); mul!(similar(x, T, size(adjA, 1)), adjA, x, true, false))
-Base.:*(adjA::AdjOrTransSparseMatrix1DVBC, B::AdjOrTransStridedOrTriangularMatrix) =
+Base.:*(adjA::AdjOrTransSparseMatrix1DVBC, B::AdjOrTransDenseMatrix) =
     (T = Base.promote_op(LinearAlgebra.matprod, eltype(adjA), eltype(B)); mul!(similar(B, T, (size(adjA, 1), size(B, 2))), adjA, B, true, false))
