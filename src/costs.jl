@@ -11,8 +11,6 @@ model_SparseMatrix1DVBC_memory(Tv, Ti) = ColumnBlockComponentCostModel{Int}(3 * 
 
 model_SparseMatrix1DVBC_TrSpMV_time(W, Tv, Ti, Tu; kwargs...) = ColumnBlockComponentCostModel{Float64}(model_SparseMatrix1DVBC_TrSpMV_time_params(W, Tv, Ti, Tu; kwargs...)...)
 
-model_SparseMatrix1DVBC_TrSpMV_fancy(W, Tv, Ti, Tu; kwargs...) = ColumnBlockComponentCostModel{Float64}(model_SparseMatrix1DVBC_TrSpMV_fancy_params(W, Tv, Ti, Tu; kwargs...)...)
-
 @memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_timings")) function model_SparseMatrix1DVBC_TrSpMV_time_data(W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
     @info "collecting data for $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
     @assert arch == arch_id()
@@ -98,7 +96,8 @@ model_SparseMatrix1DVBC_TrSpMV_fancy(W, Tv, Ti, Tu; kwargs...) = ColumnBlockComp
     return (ms, ns, Ls, ws, qs, T)
 end
 
-@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_time_params")) function model_SparseMatrix1DVBC_TrSpMV_time_params(W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
+#=
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_simple_params")) function model_SparseMatrix1DVBC_TrSpMV_simple_params(W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
     @info "calculating cost model for $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
     (ms, ns, Ls, ws, qs, T) = model_SparseMatrix1DVBC_TrSpMV_time_data(W, Tv, Ti, Tu; cache = cache, arch = arch)
     D = hcat(ms, Ls, ns, qs, qs .* ws)
@@ -107,8 +106,9 @@ end
     @info "done!"
     return (0.0, Line(β_col₀, β_col₁))
 end
+=#
 
-@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_fancy_params")) function model_SparseMatrix1DVBC_TrSpMV_fancy_params(W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_time_params")) function model_SparseMatrix1DVBC_TrSpMV_time_params(W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
     @info "calculating cost model for $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
     (ms, ns, Ls, ws, qs, T) = model_SparseMatrix1DVBC_TrSpMV_time_data(W, Tv, Ti, Tu; cache = cache, arch = arch)
     d = Vector{Float64}[]
@@ -141,9 +141,7 @@ model_SparseMatrixVBC_blocks() = BlockComponentCostModel{Int}(0, 0, (1,), (1, ))
 
 model_SparseMatrixVBC_memory(Tv, Ti) = BlockComponentCostModel{Int}(sizeof(Ti), 3 * sizeof(Ti), (Line(1, 0), Line(0, 1)), (Line(sizeof(Ti), 0), Line(0, sizeof(Tv))))
 
-model_SparseMatrixVBC_TrSpMV_time(U, W, Tv, Ti, Tu; kwargs...) = BlockComponentCostModel{Float64}(model_SparseMatrixVBC_TrSpMV_time_params(U, W, Tv, Ti, Tu; kwargs...)...)
-
-model_SparseMatrixVBC_TrSpMV_fancy(R, U, W, Tv, Ti, Tu; kwargs...) = BlockComponentCostModel{Float64}(model_SparseMatrixVBC_TrSpMV_fancy_params(R, U, W, Tv, Ti, Tu; kwargs...)...)
+model_SparseMatrixVBC_TrSpMV_time(R, U, W, Tv, Ti, Tu; kwargs...) = BlockComponentCostModel{Float64}(model_SparseMatrixVBC_TrSpMV_time_params(R, U, W, Tv, Ti, Tu; kwargs...)...)
 
 @memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_timings")) function model_SparseMatrixVBC_TrSpMV_time_data(U, W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
     @info "collecting data for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
@@ -239,7 +237,8 @@ model_SparseMatrixVBC_TrSpMV_fancy(R, U, W, Tv, Ti, Tu; kwargs...) = BlockCompon
     return (ms, ns, Ks, Ls, us, ws, qs, T)
 end
 
-@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_time_params")) function model_SparseMatrixVBC_TrSpMV_time_params(U, W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
+#=
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_simple_params")) function model_SparseMatrixVBC_TrSpMV_simple_params(U, W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
     @info "calculating cost model for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
     (ms, ns, Ks, Ls, us, ws, qs, T) = model_SparseMatrixVBC_TrSpMV_time_data(U, W, Tv, Ti, Tu; cache = cache, arch = arch)
     D = hcat(Ks, ms, Ls, ns, qs, qs .* us .* ws)
@@ -248,8 +247,9 @@ end
     @info "done!"
     return (0.0, 0.0, (Line(β_col₀, 0.0), Line(0.0, 1.0)), (Line(1.0, 0.0), Line(0.0, β_col₁)))
 end
+=#
 
-@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_fancy_params")) function model_SparseMatrixVBC_TrSpMV_fancy_params(R, U, W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_time_params")) function model_SparseMatrixVBC_TrSpMV_time_params(R, U, W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
     @info "calculating cost model for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
     (ms, ns, Ks, Ls, us, ws, qs, T) = model_SparseMatrixVBC_TrSpMV_time_data(U, W, Tv, Ti, Tu; cache = cache, arch = arch)
     d = Vector{Float64}[]
