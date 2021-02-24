@@ -11,7 +11,7 @@ model_SparseMatrix1DVBC_memory(Tv, Ti) = ColumnBlockComponentCostModel{Int}(3 * 
 
 model_SparseMatrix1DVBC_TrSpMV_time(W, Tv, Ti, Tu; kwargs...) = ColumnBlockComponentCostModel{Float64}(model_SparseMatrix1DVBC_TrSpMV_time_params(W, Tv, Ti, Tu; kwargs...)...)
 
-@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_timings")) function model_SparseMatrix1DVBC_TrSpMV_time_data(W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_timings")) function model_SparseMatrix1DVBC_TrSpMV_time_data(W, Tv, Ti, Tu; cache=:L2Cache, exceed=false, arch=arch_id())
     @info "collecting data for $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
     @assert arch == arch_id()
 
@@ -40,16 +40,27 @@ model_SparseMatrix1DVBC_TrSpMV_time(W, Tv, Ti, Tu; kwargs...) = ColumnBlockCompo
         # m = n
         # q = L * d
         # Total Usage
-        # ((3 + d) Ti + 2 w Tu + d w Tv)L < C/2
-        d = 8
-        C = first(filter(t->t.type_ == cache, collect(Hwloc.topology_load()))).attr.size / 2
-        L₀ = floor(Int, C/((3 + d) * sizeof(Ti) + (2 * w) * sizeof(Tu) + (d * w) * sizeof(Tv)))
-        n₀ = L₀ * w
-        m₀ = n₀
-        q₀ = L₀ * d
+        # ((3 + d) Ti + 2 w Tu + d w Tv)L
+        if exceed
+            d = 8
+            C = first(filter(t->t.type_ == cache, collect(Hwloc.topology_load()))).attr.size * 2
+            L₀ = ceil(Int, C/((3 + d) * sizeof(Ti) + (2 * w) * sizeof(Tu) + (d * w) * sizeof(Tv)))
+            n₀ = L₀ * w
+            m₀ = n₀
+            q₀ = L₀ * d
+            space = ((m₀, L₀, q₀), (m₀, 2L₀, q₀), (2m₀, L₀, q₀), (m₀, L₀, 2q₀))
+        else
+            d = 8
+            C = first(filter(t->t.type_ == cache, collect(Hwloc.topology_load()))).attr.size / 2
+            L₀ = floor(Int, C/((3 + d) * sizeof(Ti) + (2 * w) * sizeof(Tu) + (d * w) * sizeof(Tv)))
+            n₀ = L₀ * w
+            m₀ = n₀
+            q₀ = L₀ * d
+            space = ((m₀, L₀, q₀), (m₀, fld(L₀, 2), q₀), (fld(m₀, 2), L₀, q₀), (m₀, L₀, fld(q₀, 2)))
+        end
         @assert L₀ >= 4
 
-        for (m, L, q) in ((m₀, L₀, q₀), (m₀, fld(L₀, 2), q₀), (fld(m₀, 2), L₀, q₀), (m₀, L₀, fld(q₀, 2)))
+        for (m, L, q) in space
             n = w * L
             _q = 0
             A_ILh = Set{Tuple{Int, Int}}()
@@ -73,7 +84,6 @@ model_SparseMatrix1DVBC_TrSpMV_time(W, Tv, Ti, Tu; kwargs...) = ColumnBlockCompo
             x = ones(Tu, m)
             y = ones(Tu, n)
 
-            mul!(y, B', x)
             _bench = @benchmarkable mul!($y, $B', $x)
             if _params === nothing
                 tune!(_bench)
@@ -96,21 +106,9 @@ model_SparseMatrix1DVBC_TrSpMV_time(W, Tv, Ti, Tu; kwargs...) = ColumnBlockCompo
     return (ms, ns, Ls, ws, qs, T)
 end
 
-#=
-@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_simple_params")) function model_SparseMatrix1DVBC_TrSpMV_simple_params(W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_time_params")) function model_SparseMatrix1DVBC_TrSpMV_time_params(W, Tv, Ti, Tu; cache=:L2Cache, exceed=false, arch=arch_id())
     @info "calculating cost model for $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
-    (ms, ns, Ls, ws, qs, T) = model_SparseMatrix1DVBC_TrSpMV_time_data(W, Tv, Ti, Tu; cache = cache, arch = arch)
-    D = hcat(ms, Ls, ns, qs, qs .* ws)
-    (α_row, α_col₀, α_col₁, β_col₀, β_col₁) = qr(Diagonal(1 ./ T) * D, Val(true)) \ ones(length(T))
-    @info "results" α_row α_col₀ α_col₁ β_col₀ β_col₁
-    @info "done!"
-    return (0.0, Line(β_col₀, β_col₁))
-end
-=#
-
-@memoize DiskCache(joinpath(@get_scratch!("autotune"), "1DVBC_TrSpMV_time_params")) function model_SparseMatrix1DVBC_TrSpMV_time_params(W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
-    @info "calculating cost model for $(SparseMatrix1DVBC{W, Tv, Ti})' * $(Vector{Tu})..."
-    (ms, ns, Ls, ws, qs, T) = model_SparseMatrix1DVBC_TrSpMV_time_data(W, Tv, Ti, Tu; cache = cache, arch = arch)
+    (ms, ns, Ls, ws, qs, T) = model_SparseMatrix1DVBC_TrSpMV_time_data(W, Tv, Ti, Tu; cache = cache, exceed = exceed, arch = arch)
     d = Vector{Float64}[]
     for i = 1:length(T) #Create one-hot representation
         d_row = ms[i]
@@ -143,7 +141,7 @@ model_SparseMatrixVBC_memory(Tv, Ti) = BlockComponentCostModel{Int}(sizeof(Ti), 
 
 model_SparseMatrixVBC_TrSpMV_time(R, U, W, Tv, Ti, Tu; kwargs...) = BlockComponentCostModel{Float64}(model_SparseMatrixVBC_TrSpMV_time_params(R, U, W, Tv, Ti, Tu; kwargs...)...)
 
-@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_timings")) function model_SparseMatrixVBC_TrSpMV_time_data(U, W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_timings")) function model_SparseMatrixVBC_TrSpMV_time_data(U, W, Tv, Ti, Tu; cache=:L2Cache, exceed=false, arch=arch_id())
     @info "collecting data for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
     @assert arch == arch_id()
 
@@ -176,18 +174,30 @@ model_SparseMatrixVBC_TrSpMV_time(R, U, W, Tv, Ti, Tu; kwargs...) = BlockCompone
             # q = L * d
             # Total Usage
             # ((3 + (w/u) + d) Ti + 2 w Tu + d u w Tv)L < C/2
-            d = 8
-            C = first(filter(t->t.type_ == cache, collect(Hwloc.topology_load()))).attr.size / 2
-            L₀ = floor(Int, C/((3 + d + (w/u)) * sizeof(Ti) + (2 * w) * sizeof(Tu) + (d * u * w) * sizeof(Tv)))
-            n₀ = L₀ * w
-            K₀ = fld(n₀, u)
-            m₀ = K₀ * u
-            q₀ = L₀ * d
+            if exceed
+                d = 8
+                C = first(filter(t->t.type_ == cache, collect(Hwloc.topology_load()))).attr.size * 2
+                L₀ = ceil(Int, C/((3 + d + (w/u)) * sizeof(Ti) + (2 * w) * sizeof(Tu) + (d * u * w) * sizeof(Tv)))
+                n₀ = L₀ * w
+                K₀ = cld(n₀, u)
+                m₀ = K₀ * u
+                q₀ = L₀ * d
+                space = ((K₀, L₀, q₀), (K₀, 2L₀, q₀), (2K₀, L₀, q₀), (K₀, L₀, 2q₀))
+            else
+                d = 8
+                C = first(filter(t->t.type_ == cache, collect(Hwloc.topology_load()))).attr.size / 2
+                L₀ = floor(Int, C/((3 + d + (w/u)) * sizeof(Ti) + (2 * w) * sizeof(Tu) + (d * u * w) * sizeof(Tv)))
+                n₀ = L₀ * w
+                K₀ = fld(n₀, u)
+                m₀ = K₀ * u
+                q₀ = L₀ * d
+                space = ((K₀, L₀, q₀), (K₀, fld(L₀, 2), q₀), (fld(K₀, 2), L₀, q₀), (K₀, L₀, fld(q₀, 2)))
+            end
 
             @assert L₀ >= 4
             @assert K₀ >= 4
 
-            for (K, L, q) in ((K₀, L₀, q₀), (K₀, fld(L₀, 2), q₀), (fld(K₀, 2), L₀, q₀), (K₀, L₀, fld(q₀, 2)))
+            for (K, L, q) in space
                 (m, n) = (u * K, w * L)
                 _q = 0
                 A_KLh = Set{Tuple{Int, Int}}()
@@ -211,7 +221,6 @@ model_SparseMatrixVBC_TrSpMV_time(R, U, W, Tv, Ti, Tu; kwargs...) = BlockCompone
                 x = ones(Tu, m)
                 y = ones(Tu, n)
 
-                mul!(y, B', x)
                 _bench = @benchmarkable mul!($y, $B', $x)
                 if _params === nothing
                     tune!(_bench)
@@ -237,21 +246,9 @@ model_SparseMatrixVBC_TrSpMV_time(R, U, W, Tv, Ti, Tu; kwargs...) = BlockCompone
     return (ms, ns, Ks, Ls, us, ws, qs, T)
 end
 
-#=
-@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_simple_params")) function model_SparseMatrixVBC_TrSpMV_simple_params(U, W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
+@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_time_params")) function model_SparseMatrixVBC_TrSpMV_time_params(R, U, W, Tv, Ti, Tu; cache=:L2Cache, exceed=false, arch=arch_id())
     @info "calculating cost model for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
-    (ms, ns, Ks, Ls, us, ws, qs, T) = model_SparseMatrixVBC_TrSpMV_time_data(U, W, Tv, Ti, Tu; cache = cache, arch = arch)
-    D = hcat(Ks, ms, Ls, ns, qs, qs .* us .* ws)
-    (α_row₀, α_row₁, α_col₀, α_col₁, β_col₀, β_col₁) = qr(Diagonal(1 ./ T) * D, Val(true)) \ ones(length(T))
-    @info "results" α_row₀ α_row₁ α_col₀ α_col₁ β_col₀ β_col₁
-    @info "done!"
-    return (0.0, 0.0, (Line(β_col₀, 0.0), Line(0.0, 1.0)), (Line(1.0, 0.0), Line(0.0, β_col₁)))
-end
-=#
-
-@memoize DiskCache(joinpath(@get_scratch!("autotune"), "VBC_TrSpMV_time_params")) function model_SparseMatrixVBC_TrSpMV_time_params(R, U, W, Tv, Ti, Tu; cache=:L2Cache, arch=arch_id())
-    @info "calculating cost model for $(SparseMatrixVBC{U, W, Tv, Ti})' * $(Vector{Tu})..."
-    (ms, ns, Ks, Ls, us, ws, qs, T) = model_SparseMatrixVBC_TrSpMV_time_data(U, W, Tv, Ti, Tu; cache = cache, arch = arch)
+    (ms, ns, Ks, Ls, us, ws, qs, T) = model_SparseMatrixVBC_TrSpMV_time_data(U, W, Tv, Ti, Tu; cache = cache, exceed = exceed, arch = arch)
     d = Vector{Float64}[]
     for i = 1:length(T) #Create one-hot representation
         d_row = zeros(U)
