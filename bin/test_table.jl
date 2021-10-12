@@ -123,8 +123,6 @@ for mtx in [
 
         model_time = total_value(A, B.Π, B.Φ, mdl_time_2D) + ChainPartitioners.row_component_value(B.Π, mdl_time_2D)
 
-        @info norm(y - z)
-        @info norm(z)
         @assert y ≈ z
         push!(rows, [key setup_time mem run_time model_time])
     end
