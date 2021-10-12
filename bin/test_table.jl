@@ -10,19 +10,19 @@ using ChainPartitioners
 using InteractiveUtils
 
 for mtx in [
-            "DIMACS10/chesapeake",
-            "HB/bcsstk04",
+            #"DIMACS10/chesapeake",
+            #"HB/bcsstk04",
             "Boeing/ct20stif",
 
-            "Simon/raefsky4",
-            "FIDAP/ex11",
-            "Vavasis/av41092",
-            "Goodwin/rim",
-            "GHS_psdef/bmw7st_1",
-            "Williams/cop20k_A",
-            "Boeing/pwtk",
-            "Bova/rma10",
-            "GHS_psdef/s3dkq4m2",
+            #"Simon/raefsky4",
+            #"FIDAP/ex11",
+            #"Vavasis/av41092",
+            #"Goodwin/rim",
+            #"GHS_psdef/bmw7st_1",
+            #"Williams/cop20k_A",
+            #"Boeing/pwtk",
+            #"Bova/rma10",
+            #"GHS_psdef/s3dkq4m2",
            ]
     A = permutedims(sparse(mdopen(mtx).A))
 
@@ -85,7 +85,6 @@ for mtx in [
         push!(rows, [key setup_time mem run_time model_time])
     end
 
-
     for (key, method) in [
         ("1D 2D", AlternatingPacker(DynamicTotalChunker(limit_width(mdl_blocks_1D)), EquiChunker(1))),
         ("strict 2D", AlternatingPacker(StrictChunker(w_max), StrictChunker(w_max))),
@@ -124,6 +123,8 @@ for mtx in [
 
         model_time = total_value(A, B.Π, B.Φ, mdl_time_2D) + ChainPartitioners.row_component_value(B.Π, mdl_time_2D)
 
+        @info norm(y - z)
+        @info norm(z)
         @assert y ≈ z
         push!(rows, [key setup_time mem run_time model_time])
     end

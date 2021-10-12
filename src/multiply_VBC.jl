@@ -90,7 +90,7 @@ function LinearAlgebra.mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:Sparse
     Δw = fld(DEFAULT_SIMD_SIZE, sizeof(eltype(y)))
     return _mul!(y, adjA, x, α, β, Val(Δw))
 end
-@generated function _mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrixVBC{U, W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrixVBC{U, W, Tv, Ti}}}, x::StridedVector, α::Number, β::Number, ::Val{Δw}) where {U, W, Tv<:SIMD.VecTypes, Ti, Δw}
+@generated function _VBR_mul!(y::StridedVector, x::StridedVector, α::Number, β::Number, l, j, w, A_ofs, A_pos, A_idx, A_val, Π_spl, ::Val{Δw}, ::Val{U}, ::Val{W}, ::Val{Tv}, ::Val{Ti}) where {Δw, U, W, Tv, Ti}
     if Δw == 1
         ws = (1:W...,)
     else
@@ -116,7 +116,7 @@ end
         else
             return quote
                 $thk
-                for Δj = 0:w - 1
+                for Δj = 0:(w - 1)
                     y[j + Δj] = tmp[1 + Δj]
                 end
             end
@@ -133,46 +133,62 @@ end
         end
         return thk
     end
-
     thunk = quote
         @inbounds begin
-            A = adjA.parent
-            size(A, 2) == size(y, 1) || throw(DimensionMismatch())
-            size(A, 1) == size(x, 1) || throw(DimensionMismatch())
-            (m, n) = size(A)
+            $(le_nest(w->stripe_body(false, w), :w, ws))
+        end
+    end
 
-            if β != 1
-                β != 0 ? rmul!(y, β) : fill!(y, zero(eltype(y)))
-            end
-            
-            Π_spl = A.Π.spl
-            Φ_spl = A.Φ.spl
-            A_pos = A.pos
-            A_idx = A.idx
-            A_ofs = A.ofs
-            A_val = A.val
-            L = length(A.Φ)
-            L_safe = L
-            while L_safe >= 1 && n + 1 - Φ_spl[L_safe] < $(Δw * cld(W, Δw)) L_safe -= 1 end
-            for l = 1:L_safe
-                j = Φ_spl[l]
-                w = Φ_spl[l + 1] - j
-                $(le_nest(w->stripe_body(true, w), :w, ws))
-            end
-            for l = L_safe + 1:L
-                j = Φ_spl[l]
-                w = Φ_spl[l + 1] - j
-                $(le_nest(w->stripe_body(false, w), :w, ws))
-            end
-            return y
-        end
-    end
     if eltype(y) <: SIMD.FloatingTypes
-        thunk = quote
-            @fastmath $thunk
-        end
+        thunk = :(@fastmath $thunk)
     end
-    return thunk
+
+    return :(Base.@_inline_meta; $thunk)
+end
+
+@inline function _mul!(y::StridedVector, adjA::Union{Adjoint{<:Any,<:SparseMatrixVBC{U, W, Tv, Ti}}, Transpose{<:Any, <:SparseMatrixVBC{U, W, Tv, Ti}}}, x::StridedVector, α::Number, β::Number, Δw) where {U, W, Tv<:SIMD.VecTypes, Ti}
+    @inbounds begin
+        A = adjA.parent
+        size(A, 2) == size(y, 1) || throw(DimensionMismatch())
+        size(A, 1) == size(x, 1) || throw(DimensionMismatch())
+        (m, n) = size(A)
+
+        if β != 1
+            β != 0 ? rmul!(y, β) : fill!(y, zero(eltype(y)))
+        end
+        
+        Π_spl = A.Π.spl
+        Φ_spl = A.Φ.spl
+        A_pos = A.pos
+        A_idx = A.idx
+        A_ofs = A.ofs
+        A_val = A.val
+        L = length(A.Φ)
+        #=
+        L_safe = L
+        while L_safe >= 1 && n + 1 - Φ_spl[L_safe] < $(Δw * cld(W, Δw)) L_safe -= 1 end
+        for l = 1:L_safe
+            j = Φ_spl[l]
+            w = Φ_spl[l + 1] - j
+            $(le_nest(w->stripe_body(true, w), :w, ws))
+        end
+        for l = L_safe + 1:L
+            j = Φ_spl[l]
+            w = Φ_spl[l + 1] - j
+            $(le_nest(w->stripe_body(false, w), :w, ws))
+        end
+        =#
+
+        l′ = Atomic{Int}(1)
+        @threads for t = 1:nthreads()
+            while (l = atomic_add!(l′, 1)) <= L
+                j = Φ_spl[l]
+                w = Φ_spl[l + 1] - j
+                _VBR_mul!(y, x, α, β, l, j, w, A_ofs, A_pos, A_idx, A_val, Π_spl, Δw, Val(U), Val(W), Val(Tv), Val(Ti))
+            end
+        end
+        return y
+    end
 end
 
 Base.:*(adjA::AdjOrTransSparseMatrixVBC, x::StridedVector{Tx}) where {Tx} =

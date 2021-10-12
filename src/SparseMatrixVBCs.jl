@@ -11,6 +11,7 @@ using MemoizedMethods
 using DiskCaches
 using Scratch
 using SHA
+using Base.Threads
 
 using CpuId
 const DEFAULT_SIMD_SIZE = CpuId.simdbytes()
