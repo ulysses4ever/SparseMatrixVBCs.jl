@@ -45,7 +45,7 @@ for mtx in [
 
     w_max = 8
 
-    limit_width(mdl) = ConstrainedCost(mdl, WidthCost(), w_max)
+    limit_width(mdl) = ConstrainedCost(mdl, VertexCount(), w_max)
 
     mdl_blocks_1D = model_SparseMatrix1DVBC_blocks()
     mdl_memory_1D = model_SparseMatrix1DVBC_memory(eltype(A), Int)

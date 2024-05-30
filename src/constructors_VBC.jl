@@ -2,9 +2,9 @@ default_partitioner(::Type{<:SparseMatrixVBC{U, W, Tv, Ti}}) where {U, W, Tv, Ti
     AlternatePacker(
         EquiChunker(),
         EquiChunker(),
-        DynamicTotalChunker(ConstrainedCost(model_SparseMatrixVBC_memory(Tv, Ti), WidthCost(), W)),
-        DynamicTotalChunker(ConstrainedCost(permutedims(model_SparseMatrixVBC_memory(Tv, Ti)), WidthCost(), U)),
-        DynamicTotalChunker(ConstrainedCost(model_SparseMatrixVBC_memory(Tv, Ti), WidthCost(), W)),
+        DynamicTotalChunker(ConstrainedCost(model_SparseMatrixVBC_memory(Tv, Ti), VertexCount(), W)),
+        DynamicTotalChunker(ConstrainedCost(permutedims(model_SparseMatrixVBC_memory(Tv, Ti)), VertexCount(), U)),
+        DynamicTotalChunker(ConstrainedCost(model_SparseMatrixVBC_memory(Tv, Ti), VertexCount(), W)),
     )
 
 function SparseMatrixVBC{U, W}(A::SparseMatrixCSC{Tv, Ti}, method=default_partitioner(SparseMatrixVBC{U, W, Tv, Ti})) where {U, W, Tv, Ti}
