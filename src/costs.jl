@@ -5,7 +5,7 @@ end
 
 @inline (p::Line)(x) = p.a + p.b * x
 
-model_SparseMatrix1DVBC_blocks() = AffineNetCostModel(0, 0, 0, 1)
+model_SparseMatrix1DVBC_blocks() = AffineConnectivityModel(0, 0, 0, 1)
 
 model_SparseMatrix1DVBC_memory(Tv, Ti) = ColumnBlockComponentCostModel{Int}(3 * sizeof(Ti), Line(sizeof(Ti), sizeof(Tv)))
 
